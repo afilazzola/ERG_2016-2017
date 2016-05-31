@@ -1,0 +1,112 @@
+---
+title:
+author: "fitz90"
+date: "June 2016"
+output:
+  html_document:
+    theme: yeti
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+###Ephedra regional gradient (ERG) analyses
+An under-examined component of the shrub-annual relationship is how regional drivers, such as climate, may alter the sign or magnitude of positive interactions. Interspecific interactions between plants have been shown to be strongly linked to climate, particularly temperature and precipitation. The stress-gradient hypothesis (SGH) predicts that higher abiotic stress (i.e. for deserts, increasing temperature and reduced precipitation) will increase the frequency of positive interactions among shrubs and their annual understory. Regional climate gradients also have indirect effects on plant composition, such as determining consumer abundance and soil nutrient composition. Nutrient availability is particularly affected by precipitation because of altered decomposition rates of organic matter and mineralization. Therefore, the strength of facilitation and operating mechanism of a shrub on the annual plant community may change along a regional gradient. Within this experiment we test the hypothesis that positive interactions among shrubs and annual plants will increase with abiotic stress and reduce nutrient availability along a regional gradient of aridity.
+
+![](./ephedra_cover.JPG)
+
+[ecoblender](http://ecoblender.org)
+
+[alex.filazzola](http://www.filazzola.info)
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load packages, echo=FALSE, warning=FALSE, message=FALSE}
+## load packages for spatial manipulation
+library(raster)
+library(rgdal)
+library(dismo)
+library(rJava)
+library(maptools)
+library(rgeos)
+library(ncdf4)
+```
+
+``` {r load functions, echo=FALSE}
+error.bar <- function(x, y, upper, lower=upper, length=0,...){
+  if(length(x) != length(y) | length(y) !=length(lower) | length(lower) != length(upper))
+    stop("vectors must be same length")
+  arrows(x,y+upper, x, y-lower, angle=90, code=3, length=0, ...)
+}
+se <- function(x) sd(x)/sqrt(length(x)) ## standard error
+
+get_cru <- function(lat, lon, variable, folder){ ##extract CRU data
+  CRU <- file.path(folder, sprintf('cru_ts3.21.1901.2012.%s.dat.nc', variable))
+  nc  <-  nc_open(CRU)
+  lat.vals  <-    ncvar_get(nc,varid="lat")
+  lon.vals    <-    ncvar_get(nc,varid="lon")
+  days.since <- ncvar_get(nc,varid="time")
+  start.time = 1
+  
+  lat.i  <-  which.min(abs(lat.vals-lat))[1]
+  lon.i  <-  which.min(abs(lon.vals-lon))[1]
+  
+  vals = ncvar_get(nc=nc, varid=variable,start=c(lon.i,lat.i,start.time),count=c(1,1,length(days.since)))
+  nc_close(nc)
+  
+  days.since = as.Date('1900-01-01')+days.since
+  df <- data.frame("DateTime"=days.since,"vals"=vals)
+  names(df)[2] <- variable
+  return(df)
+}
+```
+
+``` {r climate extraction, echo=FALSE}
+##input lat longs for each site. 
+ID<-c(1,2,3,4,5,6,7)
+site<-c("Panoche","Cuyama","TejonRanch","Barstow","MojavePreserve","SheepholeValley","Tecopa")
+lat<-c(36.70000998,34.85521998,34.875994,35.094051,34.698199,34.205676,35.85151504)
+lon<-c(-120.801116,-119.48851,-118.60246,-116.8349,-115.684169,-115.719676,-116.186706)
+
+## assign as spatial data points
+gps <- data.frame(x=lon,y=lat)
+crs.world <-CRS("+proj=longlat +datum=WGS84")
+coordinates(gps) <- ~x+y
+proj4string(gps) <- crs.world
+
+##create empty data frame
+climate.data <- data.frame(site=character(),DateTime=as.Date(character()),pre=character(),tmp=character(),pet=character())
+
+# ##loop extraction of climate data (3 var) for each of the 6 sites. 
+# ## precipitation, temperature, potential evapotranspiration
+# for(i in 1:7){
+# precip.data <- get_cru(gps.site[i,3],gps.site[i,4], "pre", "C:\\Users\\Fitz\\Documents\\CRU data")
+# temp.data <- get_cru(gps.site[i,3],gps.site[i,4], "tmp", "C:\\Users\\Fitz\\Documents\\CRU data")
+# pet.data <- get_cru(gps.site[i,3],gps.site[i,4], "pet", "C:\\Users\\Fitz\\Documents\\CRU data")
+# site.name <- rep(paste("site",i),length(precip.data))
+# precip.data <- cbind(site.name,precip.data,temp=temp.data[,2],pet=pet.data[,2])
+# climate.data <- rbind(climate.data,precip.data)
+# }
+# 
+# ## expand date into columns
+# datetxt <- climate.data[,"DateTime"]
+# date.columns <- data.frame(year = as.numeric(format(datetxt, format = "%Y")),month = as.numeric(format(datetxt, format = "%m")))
+# 
+# ## add back to climate data
+# climate.data <- cbind(climate.data,date.columns)
+# 
+# means <- aggregate(climate.data, by=list(climate.data$site.name), mean)
+# ses <- aggregate(climate.data, by=list(climate.data$site.name), se)
+```
+
+```{r soil analyses, echo=FALSE}
+## load data from analysis UC Davis - May 25
+source('soil.analysis.data.R')
+soil.data=soil.data
+
+
+
