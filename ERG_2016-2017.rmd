@@ -12,13 +12,24 @@ output:
     toc: yes
 ---
 ###Ephedra regional gradient (ERG) analyses
-An under-examined component of the shrub-annual relationship is how regional drivers, such as climate, may alter the sign or magnitude of positive interactions. Interspecific interactions between plants have been shown to be strongly linked to climate, particularly temperature and precipitation. The stress-gradient hypothesis (SGH) predicts that higher abiotic stress (i.e. for deserts, increasing temperature and reduced precipitation) will increase the frequency of positive interactions among shrubs and their annual understory. Regional climate gradients also have indirect effects on plant composition, such as determining consumer abundance and soil nutrient composition. Nutrient availability is particularly affected by precipitation because of altered decomposition rates of organic matter and mineralization. Therefore, the strength of facilitation and operating mechanism of a shrub on the annual plant community may change along a regional gradient. Within this experiment we test the hypothesis that positive interactions among shrubs and annual plants will increase with abiotic stress and reduce nutrient availability along a regional gradient of aridity.
 
 ![](./ephedra_cover.JPG)
 
 [ecoblender](http://ecoblender.org)
 
 [alex.filazzola](http://www.filazzola.info)
+
+#### Abstract
+
+An under-examined component of the shrub-annual relationship is how regional drivers, such as climate, may alter the sign or magnitude of positive interactions. Interspecific interactions between plants have been shown to be strongly linked to climate, particularly temperature and precipitation. The stress-gradient hypothesis (SGH) predicts that higher abiotic stress (i.e. for deserts, increasing temperature and reduced precipitation) will increase the frequency of positive interactions among shrubs and their annual understory. Regional climate gradients also have indirect effects on plant composition, such as determining consumer abundance and soil nutrient composition. Nutrient availability is particularly affected by precipitation because of altered decomposition rates of organic matter and mineralization. Therefore, the strength of facilitation and operating mechanism of a shrub on the annual plant community may change along a regional gradient. 
+
+#### Hypothesis
+
+We tested the hypothesis that positive interactions among shrubs and annual plants will increase with abiotic stress and reduce nutrient availability along a regional gradient of aridity.
+
+#### Methods
+
+![](./ERGmethods.JPG)
 
 
 ```{r setup, include=FALSE}
@@ -33,6 +44,7 @@ library(dismo)
 library(rJava)
 library(maptools)
 library(rgeos)
+library(dplyr)
 library(ncdf4)
 ```
 
@@ -67,54 +79,57 @@ get_cru <- function(lat, lon, variable, folder){ ##extract CRU data
 ```
 
 ``` {r climate extraction, echo=FALSE, message=FALSE, warning=FALSE, fig.width=14, fig.height=8}
-##input lat longs for each site. 
-ID<-c(1,2,3,4,5,6,7)
-site<-c("Panoche","Cuyama","TejonRanch","Barstow","MojavePreserve","SheepholeValley","Tecopa")
-lat<-c(36.70000998,34.85521998,34.875994,35.094051,34.698199,34.205676,35.85151504)
-lon<-c(-120.801116,-119.48851,-118.60246,-116.8349,-115.684169,-115.719676,-116.186706)
-
-## assign as spatial data points
-gps <- data.frame(x=lon,y=lat)
-gps.sp <- data.frame(x=lon,y=lat)
-crs.world <-CRS("+proj=longlat +datum=WGS84")
-coordinates(gps.sp) <- ~x+y
-proj4string(gps.sp) <- crs.world
-
-##create empty data frame
-climate.data <- data.frame(site=character(),DateTime=as.Date(character()),pre=character(),tmp=character(),pet=character())
-
-##loop extraction of climate data (3 var) for each of the 7 sites.
-## precipitation, temperature, potential evapotranspiration
-for(i in 1:7){
-precip.data <- get_cru(gps[i,"y"],gps[i,"x"], "pre", "C:\\Users\\Fitz\\Documents\\CRU data")
-temp.data <- get_cru(gps[i,"y"],gps[i,"x"], "tmp", "C:\\Users\\Fitz\\Documents\\CRU data")
-pet.data <- get_cru(gps[i,"y"],gps[i,"x"], "pet", "C:\\Users\\Fitz\\Documents\\CRU data")
-site.name <- rep(paste("site",i),length(precip.data))
-precip.data <- cbind(site.name,precip.data,temp=temp.data[,2],pet=pet.data[,2])
-climate.data <- rbind(climate.data,precip.data)
-}
-
-## expand date into columns
-datetxt <- climate.data[,"DateTime"]
-date.columns <- data.frame(year = as.numeric(format(datetxt, format = "%Y")),month = as.numeric(format(datetxt, format = "%m")))
-
-## add back to climate data
-climate.data <- cbind(climate.data,date.columns)
-climate.data[,"aridity"] <- climate.data[,"pre"]/(climate.data[,"temp"]+10)
-
-means <- aggregate(climate.data, by=list(site.name=climate.data$site.name), mean)
-ses <- aggregate(climate.data, by=list(site.name=climate.data$site.name), se)
-
-## aridity of sites
-xax <- seq(1,7,1)
-par(mar=c(4.5,4.5,.5,.5))
-plot(xax,means[,"aridity"], pch=19, cex=1.2, cex.axis=1.5, cex.lab=1.8, xlab="site", ylab="aridity", ylim=c(0,3.5), xaxt="n")
-error.bar(xax,means[,"aridity"],ses[,"aridity"])
-axis(1, xax, unique(site), cex.axis=1.3)
+# ##input lat longs for each site. 
+# ID<-c(1,2,3,4,5,6,7)
+# site<-c("Panoche","Cuyama","TejonRanch","Barstow","MojavePreserve","SheepholeValley","Tecopa")
+# lat<-c(36.70000998,34.85521998,34.875994,35.094051,34.698199,34.205676,35.85151504)
+# lon<-c(-120.801116,-119.48851,-118.60246,-116.8349,-115.684169,-115.719676,-116.186706)
+# 
+# ## assign as spatial data points
+# gps <- data.frame(x=lon,y=lat)
+# gps.sp <- data.frame(x=lon,y=lat)
+# crs.world <-CRS("+proj=longlat +datum=WGS84")
+# coordinates(gps.sp) <- ~x+y
+# proj4string(gps.sp) <- crs.world
+# 
+# ##create empty data frame
+# climate.data <- data.frame(site=character(),DateTime=as.Date(character()),pre=character(),tmp=character(),pet=character())
+# 
+# ##loop extraction of climate data (3 var) for each of the 7 sites.
+# ## precipitation, temperature, potential evapotranspiration
+# for(i in 1:7){
+# precip.data <- get_cru(gps[i,"y"],gps[i,"x"], "pre", "C:\\Users\\Fitz\\Documents\\CRU data")
+# temp.data <- get_cru(gps[i,"y"],gps[i,"x"], "tmp", "C:\\Users\\Fitz\\Documents\\CRU data")
+# pet.data <- get_cru(gps[i,"y"],gps[i,"x"], "pet", "C:\\Users\\Fitz\\Documents\\CRU data")
+# site.name <- rep(paste("site",i),length(precip.data))
+# precip.data <- cbind(site.name,precip.data,temp=temp.data[,2],pet=pet.data[,2])
+# climate.data <- rbind(climate.data,precip.data)
+# }
+# 
+# ## expand date into columns
+# datetxt <- climate.data[,"DateTime"]
+# date.columns <- data.frame(year = as.numeric(format(datetxt, format = "%Y")),month = as.numeric(format(datetxt, format = "%m")))
+# 
+# ## add back to climate data
+# climate.data <- cbind(climate.data,date.columns)
+# climate.data[,"aridity"] <- climate.data[,"pre"]/(climate.data[,"temp"]+10)
+# 
+# means <- aggregate(climate.data, by=list(site.name=climate.data$site.name), mean)
+# ses <- aggregate(climate.data, by=list(site.name=climate.data$site.name), se)
+# 
+# ## aridity of sites
+# xax <- seq(1,7,1)
+# par(mar=c(4.5,4.5,.5,.5))
+# plot(xax,means[,"aridity"], pch=19, cex=1.2, cex.axis=1.5, cex.lab=1.8, xlab="site", ylab="aridity", ylim=c(0,3.5), xaxt="n")
+# error.bar(xax,means[,"aridity"],ses[,"aridity"])
+# axis(1, xax, unique(site), cex.axis=1.3)
 
 ```
 
-```{r soil analyses, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=8}
+### Nutrient analysis of soil
+
+We compared the soil nutrient content for Nitrogen, Potassium and Phoshporus in shrub and open microsites along all seven sites of the gradient. 
+```{r soil analyses, echo=FALSE, warning=FALSE, message=FALSE, fig.width=18, fig.height=7}
 ## load data from analysis UC Davis - May 25
 source('soil.analysis.data.R')
 soil.data=soil.data
@@ -122,40 +137,96 @@ soil.data=soil.data
 soil.mean <- aggregate(soil.data, by=list(site=soil.data$gradient,microsite=soil.data$microsite), mean)
 soil.se <- aggregate(soil.data, by=list(site=soil.data$gradient,microsite=soil.data$microsite), se)
 
-
+par(mfrow=c(1,3))
+xax <- seq(1,7,1)
 ## plot nitrogen
-plot(xax+0.1,soil.mean[8:14,"N"], pch=19, xlab="site", xaxt="n", ylab="Nitrogen (ppm)", ylim=c(0,40), cex.lab=1.7, xlim=c(0.8,7.2))
+plot(xax+0.1,soil.mean[8:14,"N"], pch=19, xlab="", xaxt="n", ylab="Nitrogen (ppm)", ylim=c(0,40), cex.lab=1.7, xlim=c(0.8,7.2))
 error.bar(xax+0.1,soil.mean[8:14,"N"],soil.se[8:14,"N"])
 axis(1, xax, unique(site), cex.axis=1.3)
 error.bar(xax-0.1,soil.mean[1:7,"N"],soil.se[1:7,"N"])
 points(xax-0.1,soil.mean[1:7,"N"],pch=21, bg="white")
 
-m1.s <- lm(N~gradient, data=soil.mean, microsite=="shrub")
-m1.o <- lm(N~gradient, data=soil.mean, microsite=="open")
-summary(m1.s)
-summary(m1.o)
-
 ## plot phosphorus
-plot(xax,soil.mean[8:14,"P"], pch=19, xlab="site", xaxt="n", ylab="Phosphorus (ppm)", ylim=c(0,20), cex.lab=1.7)
+plot(xax,soil.mean[8:14,"P"], pch=19, xlab="", xaxt="n", ylab="Phosphorus (ppm)", ylim=c(0,20), cex.lab=1.7)
 error.bar(xax,soil.mean[8:14,"P"],soil.se[8:14,"P"])
 axis(1, xax, unique(site), cex.axis=1.3)
 error.bar(xax-0.1,soil.mean[1:7,"P"],soil.se[1:7,"P"])
 points(xax-0.1,soil.mean[1:7,"P"],pch=21, bg="white")
 
-m2.s <- lm(P~gradient, data=soil.mean, microsite=="shrub")
-m2.o <- lm(P~gradient, data=soil.mean, microsite=="open")
-summary(m2.s)
-summary(m2.o)
-
 ## plot potassium
-plot(xax,soil.mean[8:14,"K"], pch=19, xlab="site", xaxt="n", ylab="Potassium (ppm)", ylim=c(50,600), cex.lab=1.7)
+plot(xax,soil.mean[8:14,"K"], pch=19, xlab="", xaxt="n", ylab="Potassium (ppm)", ylim=c(50,600), cex.lab=1.7)
 error.bar(xax,soil.mean[8:14,"K"],soil.se[8:14,"K"])
 axis(1, xax, unique(site), cex.axis=1.3)
 error.bar(xax-0.1,soil.mean[1:7,"K"],soil.se[1:7,"K"])
 points(xax-0.1,soil.mean[1:7,"K"],pch=21, bg="white")
 
-m3.s <- lm(K~gradient, data=soil.mean, microsite=="shrub")
-m3.o <- lm(K~gradient, data=soil.mean, microsite=="open")
-summary(m3.s)
-summary(m3.o)
+### Nitrogen ###
+m1 <- lm(N~ gradient * microsite, data=soil.mean)
+anova(m1)
+
+### phosphorus ###
+m2 <- lm(P~ gradient * microsite, data=soil.mean)
+anova(m2)
+
+### potassium ###
+m3 <- lm(K~ gradient * microsite, data=soil.mean)
+anova(m3)
 ```
+
+### Microenvironmnetal differences
+
+We compared temperature and relative humidity between shrub and open microsites among all sites along the regional gradient
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.width=18, fig.height=8, comment=NA}
+HOBO.data <- read.csv("HOBOdata2016.csv")
+sites <- as.character(unique(HOBO.data$Site))
+psuedograd <- c(2,4,5,1,6,7,3)
+
+for(i in 1:7){
+  HOBO.data[grep(sites[i], as.character(HOBO.data$Site)), "gradient"] <- psuedograd[i]
+}
+
+## daily means
+day.mean <- aggregate(HOBO.data, by=list(day=HOBO.data$Day, micro=HOBO.data$Microsite, site=HOBO.data$Site), mean)
+
+## summarize daily means across sites
+means <- day.mean %>% group_by(micro, gradient) %>% summarize(temp=mean(Temp),rh=mean(RH),temp.se=se(Temp),rh.se=se(RH))
+means <- data.frame(means)
+
+par(mar=c(4.5,4.5,.5,.5))
+
+par(mfrow=c(1,2))
+## plot temperature
+plot(xax-0.1, means[means$micro=="Shrub","temp"], pch=19, ylim=c(5,15), xlab="", xaxt="n", ylab="temperature (C°)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
+axis(1, xax, unique(site), cex.axis=1.3)
+error.bar(xax-0.1, means[means$micro=="Shrub","temp"],means[means$micro=="Shrub","temp.se"]*2, lwd=2)
+error.bar(xax+0.1, means[means$micro=="Open","temp"],means[means$micro=="Open","temp.se"]*2, lwd=2)
+points(xax+0.1, means[means$micro=="Open","temp"], pch=21, bg="White", cex=1.5)
+
+## plot relative humidity
+plot(xax-0.1, means[means$micro=="Shrub","rh"], pch=19, ylim=c(30,100), xlab="", xaxt="n", ylab="relative humidity (%)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
+axis(1, xax, unique(site), cex.axis=1.3)
+error.bar(xax-0.1, means[means$micro=="Shrub","rh"],means[means$micro=="Shrub","rh.se"]*2, lwd=2)
+error.bar(xax+0.1, means[means$micro=="Open","rh"],means[means$micro=="Open","rh.se"]*2, lwd=2)
+points(xax+0.1, means[means$micro=="Open","rh"], pch=21, bg="White", cex=1.5)
+legend(5.8,100, c("shrub","open"), pch=21, pt.bg=c("black","white"), bty="n", cex=2)
+
+## stats for temperature
+day.mean[,"gradient"] <- as.factor(day.mean$gradient)
+fit1 <- aov(log(Temp) ~ micro * gradient, data=day.mean)
+shapiro.test(fit1$residuals) ## check normality
+summary(fit1)
+
+## stats for relative humidity
+fit2 <- glm(RH/100 ~ micro * gradient, data=day.mean, family=binomial)
+anova(fit2, test="Chisq")
+```
+### Biomass differences among phytometers
+
+```{r}
+biomass <- read.csv("Biomass2016.csv")
+biomass[is.na(biomass)] <- 0
+
+bio.avg <- biomass %>% group_by(Microsite, Gradient) %>% summarize(phacelia=mean(Phacelia),plantago=mean(Plantago),salvia=mean(Salvia),other.spp=mean(Other))
+bio.avg <- data.frame(bio.avg)
+
+plot(xax-0.1, bio.avg[bio.avg$Microsite=="shrub","other.spp"], pch=19, ylim=c(0,22), xlab="", xaxt="n", ylab="biomass (g)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
