@@ -1,7 +1,7 @@
 ---
-title: 'null'
-author: "fitz90"
-date: "June 2016"
+title: 'The mechanism and magnitude of shrub facilitation changes along a regional gradient of precipitation'
+author: "Alex Filazzola"
+date: "Sept 2016"
 output:
   html_document:
     theme: yeti
