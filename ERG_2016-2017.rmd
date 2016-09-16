@@ -1,5 +1,5 @@
 ---
-title:
+title: 'null'
 author: "fitz90"
 date: "June 2016"
 output:
@@ -79,13 +79,13 @@ get_cru <- function(lat, lon, variable, folder){ ##extract CRU data
 }
 ```
 
-### Aridity gradient
+### Aridity gradient - climate data
 
-DeMartonne's aridity gradient for each of the seven sites
-``` {r climate extraction, echo=FALSE, message=FALSE, warning=FALSE, fig.width=14, fig.height=8}
+DeMartonne's aridity gradient for each of the seven sites for the last 110 years
+``` {r climate extraction, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height=8}
 ##input lat longs for each site.
 ID<-c(1,2,3,4,5,6,7)
-site<-c("Panoche","Cuyama","TejonRanch","Barstow","MojavePreserve","SheepholeValley","Tecopa")
+site<-c("Panoche","Cuyama","TejonRanch","Barstow","hwy40","Sheephole","Tecopa")
 lat<-c(36.70000998,34.85521998,34.875994,35.094051,34.698199,34.205676,35.85151504)
 lon<-c(-120.801116,-119.48851,-118.60246,-116.8349,-115.684169,-115.719676,-116.186706)
 
@@ -130,10 +130,44 @@ axis(1, xax, unique(site), cex.axis=1.3)
 
 ```
 
+### Weather for growing season
+```{r echo=FALSE, fid.width=28}
+
+## weather station data
+
+data <- read.table("Weather.2016.csv", header=T,sep=",")
+site.names <- c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")
+
+means <- aggregate(data$temp.mean, by=list(data$site), mean)
+means.se <- aggregate(data$temp.mean, by=list(data$site), se)
+means[,"se"] <- means.se[,2]
+means[,"gradient"] <- c(2,4,5,1,6,7,3)
+means <- means[order(means$gradient),]
+row.names(means) <- means[,"gradient"]
+
+par(mar=c(4.5,4.5,.5,.5))
+plot(xax,means[,2],  xlab="", ylab="temperature (C°)", ylim=c(8,16),  cex.axis=1.4, cex.lab=1.6, xaxt="n", pch=19, cex=1.5)
+error.bar(xax,means[,2],means[,"se"]*1.96, lwd=2) 
+axis(1, xax, labels=site.names, cex.axis=1)
+
+
+#precipitation
+means <- aggregate(data$precipitation, by=list(data$site), sum)
+means[,"gradient"] <- c(2,4,5,1,6,7,3)
+means <- means[order(means$gradient),]
+row.names(means) <- means[,"gradient"]
+#means.se <- aggregate(data, by=list(data$site), se)
+
+par(mar=c(4.5,4.5,1,.5))
+plot1 <- barplot(means[,2],  xlab="", ylab="precipitation (cm)", axis.lty=1, ylim=c(0,25),  cex.axis=1.4, cex.lab=1.6)
+box()
+axis(1, at=plot1, labels=site.names, cex.axis=1)
+```
+
 ### Nutrient analysis of soil
 
 We compared the soil nutrient content for Nitrogen, Potassium and Phoshporus in shrub and open microsites along all seven sites of the gradient. 
-```{r soil analyses, echo=FALSE, warning=FALSE, message=FALSE, fig.width=18, fig.height=7}
+```{r soil analyses, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7}
 ## load data from analysis UC Davis - May 25
 source('soil.analysis.data.R')
 soil.data=soil.data
@@ -141,14 +175,20 @@ soil.data=soil.data
 soil.mean <- aggregate(soil.data, by=list(site=soil.data$gradient,microsite=soil.data$microsite), mean)
 soil.se <- aggregate(soil.data, by=list(site=soil.data$gradient,microsite=soil.data$microsite), se)
 
-par(mfrow=c(1,3))
+#par(mfrow=c(1,3))
 xax <- seq(1,7,1)
 ## plot nitrogen
+
+par(mar=c(3,5,1,.5))
 plot(xax+0.1,soil.mean[8:14,"N"], pch=19, xlab="", xaxt="n", ylab="Nitrogen (ppm)", ylim=c(0,40), cex.lab=1.7, xlim=c(0.8,7.2))
 error.bar(xax+0.1,soil.mean[8:14,"N"],soil.se[8:14,"N"])
 axis(1, xax, unique(site), cex.axis=1.3)
 error.bar(xax-0.1,soil.mean[1:7,"N"],soil.se[1:7,"N"])
 points(xax-0.1,soil.mean[1:7,"N"],pch=21, bg="white")
+
+### Nitrogen ###
+m1 <- lm(N~ gradient * microsite, data=soil.mean)
+anova(m1)
 
 ## plot phosphorus
 plot(xax,soil.mean[8:14,"P"], pch=19, xlab="", xaxt="n", ylab="Phosphorus (ppm)", ylim=c(0,20), cex.lab=1.7)
@@ -157,20 +197,17 @@ axis(1, xax, unique(site), cex.axis=1.3)
 error.bar(xax-0.1,soil.mean[1:7,"P"],soil.se[1:7,"P"])
 points(xax-0.1,soil.mean[1:7,"P"],pch=21, bg="white")
 
+### phosphorus ###
+m2 <- lm(P~ gradient * microsite, data=soil.mean)
+anova(m2)
+
 ## plot potassium
 plot(xax,soil.mean[8:14,"K"], pch=19, xlab="", xaxt="n", ylab="Potassium (ppm)", ylim=c(50,600), cex.lab=1.7)
 error.bar(xax,soil.mean[8:14,"K"],soil.se[8:14,"K"])
 axis(1, xax, unique(site), cex.axis=1.3)
 error.bar(xax-0.1,soil.mean[1:7,"K"],soil.se[1:7,"K"])
 points(xax-0.1,soil.mean[1:7,"K"],pch=21, bg="white")
-
-### Nitrogen ###
-m1 <- lm(N~ gradient * microsite, data=soil.mean)
-anova(m1)
-
-### phosphorus ###
-m2 <- lm(P~ gradient * microsite, data=soil.mean)
-anova(m2)
+legend(6,580, c("shrub","open"),pch=21, pt.bg=c("black","white"), cex=1.8)
 
 ### potassium ###
 m3 <- lm(K~ gradient * microsite, data=soil.mean)
@@ -281,7 +318,9 @@ summary(m2)
 ```
 
 ### Interactions along gradient
-```{r}
+
+Relative interaction index for ambient biomass and all phytometers. Positive values represent facilitation while negative values represent an adverse shrub effect. Error bars are 95% confidence intervals. 
+```{r echo=FALSE, fig.width=18, fig.height=7}
 
 rii <- function(x, j, var)
 {
@@ -294,7 +333,27 @@ return2[is.na(return2)] <- 0
 return2
 }
 
-rii.bio <- rii(biomass, c("Site","Gradient","Microsite"),c("Other","total.phyto"))
+rii.bio <- rii(biomass, c("Site","Gradient","Microsite"),c("Phacelia","Other","total.phyto"))
 
-rii.avg <- rii.bio %>% group_by(Gradient) %>% summarize(other=mean(Other),Total.phyto=mean(total.phyto), other.se=se(Other), phyto.se=se(total.phyto))
+rii.avg <- rii.bio %>% group_by(Gradient) %>% summarize(other=mean(Other),Total.phyto=mean(total.phyto), other.se=se(Other), phyto.se=se(total.phyto), phacelia=mean(Phacelia), phac.se=se(Phacelia))
 rii.avg <- data.frame(rii.avg)
+
+
+par(mfrow=c(1,2))
+
+par(mar=c(4.5,4.5,.5,.5))
+plot(rii.avg[,"Gradient"],rii.avg[,"other"], xaxt="n", ylab="Rii Biomass", xlab="", pch=19, cex=1.5, ylim=c(-0.3,0.7), xlim=c(0.7,7.3))
+error.bar(rii.avg[,"Gradient"],rii.avg[,"other"],rii.avg[,"other.se"]*1.96)
+abline(h=0, lty=2, lwd=2)
+axis(1, xax, unique(site), cex.axis=1.3)
+text(6.5,0.68, "ambient", cex=2)
+
+
+par(mar=c(4.5,3.5,.5,.5))
+plot(rii.avg[,"Gradient"],rii.avg[,"Total.phyto"], xaxt="n", ylab="", xlab="", pch=19, cex=1.5, ylim=c(-0.3,0.7), xlim=c(0.7,7.3))
+error.bar(rii.avg[,"Gradient"],rii.avg[,"Total.phyto"],rii.avg[,"phyto.se"]*1.96)
+abline(h=0, lty=2, lwd=2)
+axis(1, xax, unique(site), cex.axis=1.2)
+text(6.5,0.68, "phytometer", cex=2)
+
+
