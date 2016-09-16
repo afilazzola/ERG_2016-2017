@@ -46,6 +46,7 @@ library(maptools)
 library(rgeos)
 library(dplyr)
 library(ncdf4)
+library(MASS)
 ```
 
 ``` {r load functions, echo=FALSE}
@@ -78,51 +79,54 @@ get_cru <- function(lat, lon, variable, folder){ ##extract CRU data
 }
 ```
 
+### Aridity gradient
+
+DeMartonne's aridity gradient for each of the seven sites
 ``` {r climate extraction, echo=FALSE, message=FALSE, warning=FALSE, fig.width=14, fig.height=8}
-# ##input lat longs for each site. 
-# ID<-c(1,2,3,4,5,6,7)
-# site<-c("Panoche","Cuyama","TejonRanch","Barstow","MojavePreserve","SheepholeValley","Tecopa")
-# lat<-c(36.70000998,34.85521998,34.875994,35.094051,34.698199,34.205676,35.85151504)
-# lon<-c(-120.801116,-119.48851,-118.60246,-116.8349,-115.684169,-115.719676,-116.186706)
-# 
-# ## assign as spatial data points
-# gps <- data.frame(x=lon,y=lat)
-# gps.sp <- data.frame(x=lon,y=lat)
-# crs.world <-CRS("+proj=longlat +datum=WGS84")
-# coordinates(gps.sp) <- ~x+y
-# proj4string(gps.sp) <- crs.world
-# 
-# ##create empty data frame
-# climate.data <- data.frame(site=character(),DateTime=as.Date(character()),pre=character(),tmp=character(),pet=character())
-# 
-# ##loop extraction of climate data (3 var) for each of the 7 sites.
-# ## precipitation, temperature, potential evapotranspiration
-# for(i in 1:7){
-# precip.data <- get_cru(gps[i,"y"],gps[i,"x"], "pre", "C:\\Users\\Fitz\\Documents\\CRU data")
-# temp.data <- get_cru(gps[i,"y"],gps[i,"x"], "tmp", "C:\\Users\\Fitz\\Documents\\CRU data")
-# pet.data <- get_cru(gps[i,"y"],gps[i,"x"], "pet", "C:\\Users\\Fitz\\Documents\\CRU data")
-# site.name <- rep(paste("site",i),length(precip.data))
-# precip.data <- cbind(site.name,precip.data,temp=temp.data[,2],pet=pet.data[,2])
-# climate.data <- rbind(climate.data,precip.data)
-# }
-# 
-# ## expand date into columns
-# datetxt <- climate.data[,"DateTime"]
-# date.columns <- data.frame(year = as.numeric(format(datetxt, format = "%Y")),month = as.numeric(format(datetxt, format = "%m")))
-# 
-# ## add back to climate data
-# climate.data <- cbind(climate.data,date.columns)
-# climate.data[,"aridity"] <- climate.data[,"pre"]/(climate.data[,"temp"]+10)
-# 
-# means <- aggregate(climate.data, by=list(site.name=climate.data$site.name), mean)
-# ses <- aggregate(climate.data, by=list(site.name=climate.data$site.name), se)
-# 
-# ## aridity of sites
-# xax <- seq(1,7,1)
-# par(mar=c(4.5,4.5,.5,.5))
-# plot(xax,means[,"aridity"], pch=19, cex=1.2, cex.axis=1.5, cex.lab=1.8, xlab="site", ylab="aridity", ylim=c(0,3.5), xaxt="n")
-# error.bar(xax,means[,"aridity"],ses[,"aridity"])
-# axis(1, xax, unique(site), cex.axis=1.3)
+##input lat longs for each site.
+ID<-c(1,2,3,4,5,6,7)
+site<-c("Panoche","Cuyama","TejonRanch","Barstow","MojavePreserve","SheepholeValley","Tecopa")
+lat<-c(36.70000998,34.85521998,34.875994,35.094051,34.698199,34.205676,35.85151504)
+lon<-c(-120.801116,-119.48851,-118.60246,-116.8349,-115.684169,-115.719676,-116.186706)
+
+## assign as spatial data points
+gps <- data.frame(x=lon,y=lat)
+gps.sp <- data.frame(x=lon,y=lat)
+crs.world <-CRS("+proj=longlat +datum=WGS84")
+coordinates(gps.sp) <- ~x+y
+proj4string(gps.sp) <- crs.world
+
+##create empty data frame
+climate.data <- data.frame(site=character(),DateTime=as.Date(character()),pre=character(),tmp=character(),pet=character())
+
+##loop extraction of climate data (3 var) for each of the 7 sites.
+## precipitation, temperature, potential evapotranspiration
+for(i in 1:7){
+precip.data <- get_cru(gps[i,"y"],gps[i,"x"], "pre", "C:\\Users\\Fitz\\Documents\\CRU data")
+temp.data <- get_cru(gps[i,"y"],gps[i,"x"], "tmp", "C:\\Users\\Fitz\\Documents\\CRU data")
+pet.data <- get_cru(gps[i,"y"],gps[i,"x"], "pet", "C:\\Users\\Fitz\\Documents\\CRU data")
+site.name <- rep(paste("site",i),length(precip.data))
+precip.data <- cbind(site.name,precip.data,temp=temp.data[,2],pet=pet.data[,2])
+climate.data <- rbind(climate.data,precip.data)
+}
+
+## expand date into columns
+datetxt <- climate.data[,"DateTime"]
+date.columns <- data.frame(year = as.numeric(format(datetxt, format = "%Y")),month = as.numeric(format(datetxt, format = "%m")))
+
+## add back to climate data
+climate.data <- cbind(climate.data,date.columns)
+climate.data[,"aridity"] <- climate.data[,"pre"]/(climate.data[,"temp"]+10)
+
+means <- aggregate(climate.data, by=list(site.name=climate.data$site.name), mean)
+ses <- aggregate(climate.data, by=list(site.name=climate.data$site.name), se)
+
+## aridity of sites
+xax <- seq(1,7,1)
+par(mar=c(4.5,4.5,.5,.5))
+plot(xax,means[,"aridity"], pch=19, cex=1.2, cex.axis=1.5, cex.lab=1.8, xlab="site", ylab="aridity", ylim=c(0,3.5), xaxt="n")
+error.bar(xax,means[,"aridity"],ses[,"aridity"])
+axis(1, xax, unique(site), cex.axis=1.3)
 
 ```
 
@@ -173,7 +177,7 @@ m3 <- lm(K~ gradient * microsite, data=soil.mean)
 anova(m3)
 ```
 
-### Microenvironmnetal differences
+### Microenvironmental differences
 
 We compared temperature and relative humidity between shrub and open microsites among all sites along the regional gradient
 ```{r echo=FALSE, warning=FALSE, message=FALSE, fig.width=18, fig.height=8, comment=NA}
@@ -222,11 +226,75 @@ anova(fit2, test="Chisq")
 ```
 ### Biomass differences among phytometers
 
-```{r}
+```{r echo=FALSE, fig.width=14, fig.height=7}
 biomass <- read.csv("Biomass2016.csv")
 biomass[is.na(biomass)] <- 0
+biomass[,"total.phyto"] <- rowSums(biomass[,6:8])
+biomass2 <- subset(biomass, Other>0) ## drop zeros for ambient
 
-bio.avg <- biomass %>% group_by(Microsite, Gradient) %>% summarize(phacelia=mean(Phacelia),plantago=mean(Plantago),salvia=mean(Salvia),other.spp=mean(Other))
+bio.avg <- biomass %>% group_by(Microsite, Gradient) %>% summarize(phacelia=mean(Phacelia),plantago=mean(Plantago),salvia=mean(Salvia),other.spp=mean(Other),total.phyto=mean(total.phyto))
 bio.avg <- data.frame(bio.avg)
 
-plot(xax-0.1, bio.avg[bio.avg$Microsite=="shrub","other.spp"], pch=19, ylim=c(0,22), xlab="", xaxt="n", ylab="biomass (g)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
+bio.se <- biomass %>% group_by(Microsite, Gradient) %>% summarize(phacelia=se(Phacelia),plantago=se(Plantago),salvia=se(Salvia),other.spp=se(Other),total.phyto=se(total.phyto))
+bio.se <- data.frame(bio.se)
+
+par(mfrow=c(1,2))
+plot(xax-0.1, bio.avg[bio.avg$Microsite=="shrub","other.spp"], pch=19, ylim=c(0,22), xlab="", xaxt="n", ylab="ambient biomass (g)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
+error.bar(xax-0.1, bio.avg[bio.avg$Microsite=="shrub","other.spp"],bio.se[bio.se$Microsite=="shrub","other.spp"]*1.96,lwd=2)
+error.bar(xax+0.1,  bio.avg[bio.avg$Microsite=="open","other.spp"], bio.se[bio.se$Microsite=="open","other.spp"]*1.96, lwd=2)
+points(xax+0.1,  bio.avg[bio.avg$Microsite=="open","other.spp"], pch=21, bg="White", cex=1.5)
+#legend(5.8,20, c("shrub","open"), pch=21, pt.bg=c("black","white"), bty="n", cex=2)
+
+
+## plot each species
+species.plot <- function(spp) {
+plot(xax-0.1, bio.avg[bio.avg$Microsite=="shrub",spp], pch=19, ylim=c(0,3), xlab="", xaxt="n", ylab="phytometer biomass (g)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
+error.bar(xax-0.1, bio.avg[bio.avg$Microsite=="shrub",spp],bio.se[bio.se$Microsite=="shrub",spp]*1.96,lwd=2)
+error.bar(xax+0.1,  bio.avg[bio.avg$Microsite=="open",spp], bio.se[bio.se$Microsite=="open",spp]*1.96, lwd=2)
+points(xax+0.1,  bio.avg[bio.avg$Microsite=="open",spp], pch=21, bg="White", cex=1.5)
+legend(5,3, c("shrub","open"), pch=21, pt.bg=c("black","white"), bty="n", cex=1.5)
+}
+
+species.plot("total.phyto")
+
+## Biomass for ambient community
+m1 <- aov(log(Other)~Site*Microsite, data=biomass2)
+summary(m1)
+# shapiro.test(m1$residuals) #normal after log transform
+
+##Biomass for all the phytometers
+biomass3 <- subset(biomass, total.phyto>0) ## drop zeros for phyto
+m2 <- aov(log(total.phyto)~Site*Microsite*Nutrients, data=biomass3)
+summary(m2)
+# shapiro.test(m2$residuals) #normal after log transform
+
+# ##Phacelia
+# bio.phac <- subset(biomass, Phacelia>0)
+# m3 <- aov(log(Phacelia)~Site*Microsite*Nutrients, data=bio.phac)
+# shapiro.test(m3$residuals)
+# 
+# 
+# ##Salvia
+# bio.sal <- subset(biomass, Salvia>0)
+# m4 <- aov(log(Salvia)~Site*Microsite*Nutrients, data=bio.sal)
+# shapiro.test(m4$residuals)
+```
+
+### Interactions along gradient
+```{r}
+
+rii <- function(x, j, var)
+{
+s1 <- subset(x, microsite == "shrub", select=var)
+o1 <- subset(x, microsite == "open", select=var)
+return1 <- (s1 - o1) / (s1+o1)
+x1 <- x[seq(1, nrow(x), by = 2),]
+return2 <- cbind(x1[j], return1)
+return2[is.na(return2)] <- 0
+return2
+}
+
+rii.bio <- rii(biomass, c("Site","Gradient","Microsite"),c("Other","total.phyto"))
+
+rii.avg <- rii.bio %>% group_by(Gradient) %>% summarize(other=mean(Other),Total.phyto=mean(total.phyto), other.se=se(Other), phyto.se=se(total.phyto))
+rii.avg <- data.frame(rii.avg)
