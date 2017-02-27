@@ -47,6 +47,7 @@ library(rgeos)
 library(dplyr)
 library(ncdf4)
 library(MASS)
+library(ggplot2)
 ```
 
 ``` {r load functions, echo=FALSE}
@@ -135,7 +136,7 @@ axis(1, xax, unique(site), cex.axis=1.3)
 
 ## weather station data
 
-data <- read.table("Weather.2016.csv", header=T,sep=",")
+data <- read.table("data/ERG.weather.2016.csv", header=T,sep=",")
 site.names <- c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")
 
 means <- aggregate(data$temp.mean, by=list(data$site), mean)
@@ -169,8 +170,7 @@ axis(1, at=plot1, labels=site.names, cex.axis=1)
 We compared the soil nutrient content for Nitrogen, Potassium and Phoshporus in shrub and open microsites along all seven sites of the gradient. 
 ```{r soil analyses, echo=FALSE, warning=FALSE, message=FALSE, fig.width=10, fig.height=7}
 ## load data from analysis UC Davis - May 25
-source('soil.analysis.data.R')
-soil.data=soil.data
+soil.data <- read.table("data/ERG.soilnutrients.csv", header=T, sep=",")
 
 soil.mean <- aggregate(soil.data, by=list(site=soil.data$gradient,microsite=soil.data$microsite), mean)
 soil.se <- aggregate(soil.data, by=list(site=soil.data$gradient,microsite=soil.data$microsite), se)
@@ -218,7 +218,7 @@ anova(m3)
 
 We compared temperature and relative humidity between shrub and open microsites among all sites along the regional gradient
 ```{r echo=FALSE, warning=FALSE, message=FALSE, fig.width=18, fig.height=8, comment=NA}
-HOBO.data <- read.csv("HOBOdata2016.csv")
+HOBO.data <- read.csv("data/ERG.HOBOdata.2016.csv")
 sites <- as.character(unique(HOBO.data$Site))
 psuedograd <- c(2,4,5,1,6,7,3)
 
@@ -261,99 +261,47 @@ summary(fit1)
 fit2 <- glm(RH/100 ~ micro * gradient, data=day.mean, family=binomial)
 anova(fit2, test="Chisq")
 ```
-### Biomass differences among phytometers
 
-```{r echo=FALSE, fig.width=14, fig.height=7}
-biomass <- read.csv("Biomass2016.csv")
-biomass[is.na(biomass)] <- 0
-biomass[,"total.phyto"] <- rowSums(biomass[,6:8])
-biomass2 <- subset(biomass, Other>0) ## drop zeros for ambient
+### phytometer preliminary analysis
+```{r, warnings=FALSE, fig.width=10}
+##load phytometer data
 
-bio.avg <- biomass %>% group_by(Microsite, Gradient) %>% summarize(phacelia=mean(Phacelia),plantago=mean(Plantago),salvia=mean(Salvia),other.spp=mean(Other),total.phyto=mean(total.phyto))
-bio.avg <- data.frame(bio.avg)
-
-bio.se <- biomass %>% group_by(Microsite, Gradient) %>% summarize(phacelia=se(Phacelia),plantago=se(Plantago),salvia=se(Salvia),other.spp=se(Other),total.phyto=se(total.phyto))
-bio.se <- data.frame(bio.se)
-
-par(mfrow=c(1,2))
-plot(xax-0.1, bio.avg[bio.avg$Microsite=="shrub","other.spp"], pch=19, ylim=c(0,22), xlab="", xaxt="n", ylab="ambient biomass (g)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
-error.bar(xax-0.1, bio.avg[bio.avg$Microsite=="shrub","other.spp"],bio.se[bio.se$Microsite=="shrub","other.spp"]*1.96,lwd=2)
-error.bar(xax+0.1,  bio.avg[bio.avg$Microsite=="open","other.spp"], bio.se[bio.se$Microsite=="open","other.spp"]*1.96, lwd=2)
-points(xax+0.1,  bio.avg[bio.avg$Microsite=="open","other.spp"], pch=21, bg="White", cex=1.5)
-#legend(5.8,20, c("shrub","open"), pch=21, pt.bg=c("black","white"), bty="n", cex=2)
+data <- read.csv("data/ERG.census2016.csv")
 
 
-## plot each species
-species.plot <- function(spp) {
-plot(xax-0.1, bio.avg[bio.avg$Microsite=="shrub",spp], pch=19, ylim=c(0,3), xlab="", xaxt="n", ylab="phytometer biomass (g)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
-error.bar(xax-0.1, bio.avg[bio.avg$Microsite=="shrub",spp],bio.se[bio.se$Microsite=="shrub",spp]*1.96,lwd=2)
-error.bar(xax+0.1,  bio.avg[bio.avg$Microsite=="open",spp], bio.se[bio.se$Microsite=="open",spp]*1.96, lwd=2)
-points(xax+0.1,  bio.avg[bio.avg$Microsite=="open",spp], pch=21, bg="White", cex=1.5)
-legend(5,3, c("shrub","open"), pch=21, pt.bg=c("black","white"), bty="n", cex=1.5)
+## functions
+se <- function(x) sqrt(var(x)/length(x))
+conf95 <- function(x) (sd(x)/sqrt(length(x)))*1.96
+
+bar.plots <- function(data, ...) {
+## plots
+y.min <- data[,3]-data[,5]
+y.max <- data[,3]+data[,5]
+
+plot1<- ggplot(data, aes(x=data[,1], y=data[,3], fill=data[,2]))+geom_bar(stat="identity",position=position_dodge(.9), colour="black") +  scale_fill_manual(values=c("#FFFFFF","#CCCCCC"))+
+theme_bw()+   guides(fill=FALSE)+ 
+geom_errorbar(aes(ymin=y.min,ymax=y.max, width=0), position=position_dodge(.9))+  xlab("") +
+theme(text=element_text(size=16, color="black"),panel.grid.minor=element_blank(),panel.grid.major=element_blank()) + ...
+
+return(plot1)
 }
 
-species.plot("total.phyto")
+## compare plant abundance and richness
+data2 <- subset(data, abundance>0)
 
-## Biomass for ambient community
-m1 <- aov(log(Other)~Site*Microsite, data=biomass2)
-summary(m1)
-# shapiro.test(m1$residuals) #normal after log transform
-
-##Biomass for all the phytometers
-biomass3 <- subset(biomass, total.phyto>0) ## drop zeros for phyto
-m2 <- aov(log(total.phyto)~Site*Microsite*Nutrients, data=biomass3)
-summary(m2)
-# shapiro.test(m2$residuals) #normal after log transform
-
-# ##Phacelia
-# bio.phac <- subset(biomass, Phacelia>0)
-# m3 <- aov(log(Phacelia)~Site*Microsite*Nutrients, data=bio.phac)
-# shapiro.test(m3$residuals)
-# 
-# 
-# ##Salvia
-# bio.sal <- subset(biomass, Salvia>0)
-# m4 <- aov(log(Salvia)~Site*Microsite*Nutrients, data=bio.sal)
-# shapiro.test(m4$residuals)
-```
-
-### Interactions along gradient
-
-Relative interaction index for ambient biomass and all phytometers. Positive values represent facilitation while negative values represent an adverse shrub effect. Error bars are 95% confidence intervals. 
-```{r echo=FALSE, fig.width=18, fig.height=7}
-
-rii <- function(x, j, var)
-{
-s1 <- subset(x, microsite == "shrub", select=var)
-o1 <- subset(x, microsite == "open", select=var)
-return1 <- (s1 - o1) / (s1+o1)
-x1 <- x[seq(1, nrow(x), by = 2),]
-return2 <- cbind(x1[j], return1)
-return2[is.na(return2)] <- 0
-return2
-}
-
-rii.bio <- rii(biomass, c("Site","Gradient","Microsite"),c("Phacelia","Other","total.phyto"))
-
-rii.avg <- rii.bio %>% group_by(Gradient) %>% summarize(other=mean(Other),Total.phyto=mean(total.phyto), other.se=se(Other), phyto.se=se(total.phyto), phacelia=mean(Phacelia), phac.se=se(Phacelia))
-rii.avg <- data.frame(rii.avg)
+abd <- aggregate(abundance ~ Site + Microsite, data=data2, FUN=function (x) c(avg = mean(x),SE = se(x),ci = conf95(x),n = length(x)))
+abd <- cbind(abd[,1:2],data.frame(abd[[3]])) ## convert from matrix to dataframe
+bar.plots(abd, ylab("plant abundance"))
 
 
-par(mfrow=c(1,2))
+rich <- aggregate(abundance ~ Site + Microsite, data=data2, FUN=function (x) c(avg = mean(x),SE = se(x),ci = conf95(x),n = length(x)))
+rich <- cbind(rich[,1:2],data.frame(rich[[3]])) ## convert from matrix to dataframe
+bar.plots(rich, ylab("species richness"))
 
-par(mar=c(4.5,4.5,.5,.5))
-plot(rii.avg[,"Gradient"],rii.avg[,"other"], xaxt="n", ylab="Rii Biomass", xlab="", pch=19, cex=1.5, ylim=c(-0.3,0.7), xlim=c(0.7,7.3))
-error.bar(rii.avg[,"Gradient"],rii.avg[,"other"],rii.avg[,"other.se"]*1.96)
-abline(h=0, lty=2, lwd=2)
-axis(1, xax, unique(site), cex.axis=1.3)
-text(6.5,0.68, "ambient", cex=2)
-
-
-par(mar=c(4.5,3.5,.5,.5))
-plot(rii.avg[,"Gradient"],rii.avg[,"Total.phyto"], xaxt="n", ylab="", xlab="", pch=19, cex=1.5, ylim=c(-0.3,0.7), xlim=c(0.7,7.3))
-error.bar(rii.avg[,"Gradient"],rii.avg[,"Total.phyto"],rii.avg[,"phyto.se"]*1.96)
-abline(h=0, lty=2, lwd=2)
-axis(1, xax, unique(site), cex.axis=1.2)
-text(6.5,0.68, "phytometer", cex=2)
+data3 <- subset(data, phyto.biomass>0)
+##biomass
+biomass <- aggregate(phyto.biomass ~ Site + Microsite, data=data3, FUN=function (x) c(avg = mean(x),SE = se(x),ci = conf95(x),n = length(x)))
+biomass <- data.frame(biomass[,1:2],data.frame(biomass[[3]])) ## convert from matrix to dataframe
+bar.plots(biomass, ylab("Phytometer Biomass"))
 
 
