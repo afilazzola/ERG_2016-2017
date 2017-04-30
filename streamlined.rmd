@@ -1,0 +1,83 @@
+---
+title: 'The mechanism and magnitude of shrub facilitation changes along a regional gradient of precipitation'
+author: "Alex Filazzola"
+date: "Sept 2016"
+output:
+  html_document:
+    theme: yeti
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+###Ephedra regional gradient (ERG) analyses
+
+![](./ephedra_cover.JPG)
+
+[ecoblender](http://ecoblender.org)
+
+[alex.filazzola](http://www.filazzola.info)
+
+#### Abstract
+
+An under-examined component of the shrub-annual relationship is how regional drivers, such as climate, may alter the sign or magnitude of positive interactions. Interspecific interactions between plants have been shown to be strongly linked to climate, particularly temperature and precipitation. The stress-gradient hypothesis (SGH) predicts that higher abiotic stress (i.e. for deserts, increasing temperature and reduced precipitation) will increase the frequency of positive interactions among shrubs and their annual understory. Regional climate gradients also have indirect effects on plant composition, such as determining consumer abundance and soil nutrient composition. Nutrient availability is particularly affected by precipitation because of altered decomposition rates of organic matter and mineralization. Therefore, the strength of facilitation and operating mechanism of a shrub on the annual plant community may change along a regional gradient. 
+
+#### Hypothesis
+
+Shrubs facilitate annual plant productivity in deserts and this effect will increase with aridity.
+
+#### Methods
+
+![](./ERGmethods.JPG)
+
+
+```{r load packages, echo=FALSE, warning=FALSE, message=FALSE}
+## load packages for spatial manipulation
+library(raster)
+library(rgdal)
+library(dismo)
+library(rJava)
+library(maptools)
+library(rgeos)
+library(dplyr)
+library(vegan)
+```
+
+### site level means
+```{r}
+## Obtain mean weather variables for each site
+weather <- read.csv("Data/ERG.weather.2016.csv")
+
+weather.mean <- weather %>% group_by(gradient,site) %>% summarise_each(funs(mean))
+weather.mean <- data.frame(weather.mean)
+## extract key variables
+weather.vars <- weather.mean[,c("site","gradient","wind.mean","temp.min","temp.max","humidity.mean","precipitation")]
+
+## Obtain mean nutrient variables for each site
+nutrients <- read.csv("Data/ERG.soilnutrients.csv")
+nutrients.mean <- nutrients %>% group_by(gradient,site) %>% summarise_each(funs(mean))
+nutrients.vars <- data.frame(nutrients.mean)
+
+## Obtain mean shrub traits for each site
+shrubs <- read.csv("Data/ERG.shrub.csv")
+shrubs <- subset(shrubs, Microsite=="shrub")
+shrubs.mean <- shrubs %>% group_by(Gradient,Site) %>% summarise_each(funs(mean))
+shrubs.mean <- data.frame(shrubs.mean)
+shrubs.vars <- shrubs.mean[,c("Site","Gradient","volume","canopy","Dx","DxEph","Compaction")] 
+
+##combine nutrients, weather, and shrub traits
+
+site.vars <- data.frame(weather.vars[,3:7],nutrients.vars[,5:7])
+row.names(site.vars) <- weather.vars[,1]
+
+## PCA of site characteristics
+
+pca1 <- prcomp(log(site.vars))
+plot(pca1)
+biplot(pca1)
+
+row.names(shrubs.vars) <- shrubs.vars[,1]
+pca2 <- prcomp(log(shrubs.vars[,3:7]))
+plot(pca2)
+biplot(pca2)
