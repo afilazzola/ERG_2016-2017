@@ -241,28 +241,66 @@ data <- ambient2016[,12:42]
 data[is.na(data)] <- 0
 
 
+
+### RDA
+
+##collect environmental variables for site
+nutrients <- read.csv("Data/ERG.soilnutrients.csv")
+nutrients.mean <- nutrients %>% group_by(gradient,site, microsite) %>% summarise_each(funs(mean))
+nutrients.vars <- data.frame(nutrients.mean)
+
 ## minimum explanation of variables
-
 ambient2016[is.na(ambient2016)] <- 0
+community <- ambient2016 %>% group_by(Gradient,Site, Microsite) %>% summarise_each(funs(sum))
+community <- data.frame(community)
 
-site.sum <- ambient2016 %>% group_by(Site, Microsite) %>%  summarize_each(funs(sum))
-factors <- data.frame(site.sum[,1:2])
-site.sum <- site.sum[,12:42]
-site.sum <- data.frame(site.sum)
+end.census <- subset(census2016, census=="end")
+end.census  <- end.census  %>% group_by(Gradient,Site, Microsite) %>% summarise_each(funs(mean))
+end.census<- data.frame(end.census)
+
+## daily means
+day.mean <- aggregate(HOBO.data, by=list(day=HOBO.data$Day, micro=HOBO.data$Microsite, site=HOBO.data$Site), mean)
+
+## summarize daily means across sites
+means <- day.mean %>% group_by(gradient, micro) %>% summarize(temp=mean(Temp),rh=mean(RH),temp.se=se(Temp),rh.se=se(RH))
+means <- data.frame(means)
+
+
+envs <- data.frame(swc=end.census[,"swc"],nutrients.vars[,c("N","P","K")], means[,c("temp","rh")])
+
+## hellinger transformation
+community.trans <- decostand(community[,12:42], "hellinger")
+
+## rda with environmental variables
+rda1 <- rda(community.trans, envs)
+anova(rda1)
+(R2adj <- RsquareAdj(rda1)$adj.r.squared) ## 25.7% of variation explained
+
 
 ## build byplot manually
-pca1 <- rda(decostand(site.sum, "hellinger") )
-plot(pca1, type="n")
+par(mar=c(4.5,4.5,0.5,0.5))
+plot(rda1, type="n", xlim=c(-1,1))
 
-with(site.sum, levels(factors$Site))
+with(community, levels(Site))
 
-spp.priority <- colSums(site.sum)
+spp.priority <- colSums(community[,12:42])
 
-colvec <- c("Grey90","Grey40","Grey60","Grey20","Grey70","Grey80","Grey50")
-with(factors, points(pca1, display = "sites", col = "black", pch = c(21,22), bg = colvec[Site]))
-orditorp(pca1, display = "species", cex = 0.8, col = "darkred", priority=spp.priority, air=1,)
-legend("topright", pch=c(21), legend=factors$Site[factors$Microsite=="shrub"], pt.bg=colvec, cex=1)
+colvec <- c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2")
+with(community, points(rda1, display = "sites", col = "black", pch = c(21,22), bg = colvec[Site]))
+orditorp(rda1, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=1,)
+text(rda1,  display = "bp", col = "blue", cex = 0.8) 
+legend("bottomright", pch=c(21), legend=community$Site[community$Microsite=="shrub"], pt.bg=colvec, cex=1)
 
+## check variable explanation
+vif.cca(rda1)
+
+v.clim <- cbind(envs[,c("temp","rh")])
+v.nut <- cbind(envs[,c("N","P","K")])
+v.swc <- envs[,"swc"]
+
+x <- varpart(community.trans,v.clim,v.nut,v.swc)
+
+showvarparts(3)
 ```
 
 
