@@ -1,0 +1,30 @@
+id,Site,Weather station,Network,Number of observations,Start,End
+1,Panoche Hills,Panoche.A,CIMIS,8157,01-Jan-95,02-May-17
+2,Cuyama,Cuyama,CIMIS,9982,01-Jan-90,02-May-17
+3,Tejon Ranch,Palmdale,CIMIS,4503,01-Jan-05,02-May-17
+4,Barstow,Newberry Springs II,CIMIS,798,25-Feb-15,02-May-17
+5,Heart of Mojave,Cadiz Valley,CIMIS,2377,28-Oct-10,02-May-17
+6,Sheephole Valley,Joshua Tree,CIMIS,1996,16-Nov-11,02-May-17
+7,Tecopa,Tecopa/Shosone,CEMP,3408,01-Jan-08,02-May-17
+,,,,,,
+Variable,Description,Units,,,,
+1,Database name,,,,,
+2,"Date: year,month,day",yyyymmdd,,,,
+3,Observation time,hhmm,,,,
+4,"Precipitation, amount",Millimeters,,,,
+5,"Precipitation, type",(coded),,,,
+6,"Air temperature, maximum",Celsius,,,,
+7,"Air temperature, minimum",Celsius,,,,
+8,"Air temperature, observed",Celsius,,,,
+9,Weather conditions,(coded),,,,
+10,"Wind, direction","N,NE,E,SE,S,S","W,W,NW, 0=calm",,,
+11,"Wind, speed",Meters per se,cond,,,
+12,"Bulb temperature, wet",Celsius,,,,
+13,"Bulb temperature, dry",Celsius,,,,
+14,"Soil temperature, maximum",Celsius,,,,
+15,"Soil temperature, minimum",Celsius,,,,
+16,Pan evaporation,Millimeters,,,,
+17,Solar radiation,Watts per sq.,meters,,,
+18,Reference evapotranspiration,Millimeters,,,,
+19,"Relative humidity, minimum",Percent,,,,
+20,"Relative humidity, maximum",Percent,,,,
