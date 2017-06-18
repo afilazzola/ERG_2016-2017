@@ -34,12 +34,12 @@ We tested the hypothesis that positive interactions among shrubs and annual plan
 library(raster)
 library(rgdal)
 library(dismo)
-library(rJava)
-library(maptools)
-library(rgeos)
+#library(rJava)
+#library(maptools)
 library(dplyr)
 library(vegan)
 library(MASS)
+library(ggplot2)
 ```
 
 
@@ -59,40 +59,31 @@ se <- function(x) sd(x)/sqrt(length(x)) ## standard error
 
 ## weather station data
 
-data <- read.table("data/ERG.weather.2016.csv", header=T,sep=",")
+data <- read.table("data.twoseasons/ERG.climatedata.csv", header=T,sep=",")
 site.names <- c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")
+season1 <- subset(data, year==2015 & month > 10 | year==2016 & month < 5)
+season2 <- subset(data, year==2016 & month > 10 | year==2017 & month < 5)
+data <- rbind(season1,season2)
+data[,"season"] <- c(rep("season.1",nrow(season1)),rep("season.2",nrow(season2)))
+data <- na.omit(data)
 
-means <- aggregate(data$temp.mean, by=list(data$site), mean)
-means.se <- aggregate(data$temp.mean, by=list(data$site), se)
-means[,"se"] <- means.se[,2]
-means[,"gradient"] <- c(2,4,5,1,6,7,3)
-means <- means[order(means$gradient),]
-row.names(means) <- means[,"gradient"]
+means <- aggregate(data$avg.temp, by=list(data$season,data$Gradient), mean)
+means.se <- aggregate(data$avg.temp, by=list(data$season,data$Gradient), se)
+means[,"se"] <- means.se[,3]
+colnames(means) <- c("season","gradient","avg","se")
+means[,"upper"] <- means[,"avg"]+means[,"se"]*1.96
+means[,"lower"] <- means[,"avg"]-means[,"se"]*1.96
 
-
-par(mar=c(4.5,4.5,.5,.5))
-plot(c(1:7),means[,"x"],  xlab="", ylab="temperature (C°)", ylim=c(8,16),  cex.axis=1.4, cex.lab=1.6, xaxt="n", pch=19, cex=1.5)
-error.bar(c(1:7),means[,"x"],means[,"se"]*1.96, lwd=2) 
-axis(1,c(1:7), labels=site.names, cex.axis=1)
-abline(v=3.5, lty=2)
-text(1.7, 15.5, "San Joaquin", cex=1.2)
-text(6.5, 15.5, "Mojave", cex=1.2)
-
+q <- ggplot(means, aes(x=gradient, y=avg, ymin=lower, ymax=upper, fill=season)) +  geom_pointrange( position=position_dodge(width=0.4), color = rep(c("Grey50","Black"),7), size=1)+ guides(fill = "none") +theme_classic() + scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0))
+q
 
 #precipitation
-means <- aggregate(data$precipitation, by=list(data$site), sum)
-means[,"gradient"] <- c(2,4,5,1,6,7,3)
-means <- means[order(means$gradient),]
-row.names(means) <- means[,"gradient"]
-#means.se <- aggregate(data, by=list(data$site), se)
+precip <- aggregate(data$Precip, by=list(data$season,data$Gradient), sum)
+colnames(precip) <- c("season","Gradient","Precip")
 
-par(mar=c(4.5,4.5,1,.5))
-plot1 <- barplot(means[,2],  xlab="", ylab="precipitation (cm)", axis.lty=1, ylim=c(0,25),  cex.axis=1.4, cex.lab=1.6)
-box()
-axis(1, at=plot1, labels=site.names, cex.axis=1)
-abline(v=3.7, lty=2)
-text(1.7, 23.5, "San Joaquin", cex=1.2)
-text(6.5, 23.5, "Mojave", cex=1.2)
+p <-ggplot(precip, aes(Gradient, Precip)) +geom_bar(stat = "identity", aes(fill = season), position = "dodge")+ guides(fill = "none") +theme_classic() + scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0))
+p
+
 
 ```
 
