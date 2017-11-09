@@ -41,6 +41,7 @@ library(vegan)
 library(MASS)
 library(ggplot2)
 library(tidyverse)
+library(ggthemes)
 ```
 
 
@@ -53,6 +54,7 @@ arrows(x,y+upper, x, y-lower, angle=90, code=3, length=length, ...)
 
 se <- function(x) sd(x)/sqrt(length(x)) ## standard error
 
+source("functions.r")
 ```
 
 ### Weather for growing season
@@ -75,14 +77,14 @@ colnames(means) <- c("season","gradient","avg","se")
 means[,"upper"] <- means[,"avg"]+means[,"se"]*1.96
 means[,"lower"] <- means[,"avg"]-means[,"se"]*1.96
 
-q <- ggplot(means, aes(x=gradient, y=avg, ymin=lower, ymax=upper, fill=season)) +  geom_pointrange( position=position_dodge(width=0.4), color = rep(c("Grey50","Black"),7), size=1)+ guides(fill = "none") +theme_classic() + scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0))
+q <- ggplot(means, aes(x=gradient, y=avg, ymin=lower, ymax=upper, fill=season)) +  geom_pointrange( position=position_dodge(width=0.4), color = rep(c("Grey50","Black"),7), size=1)+ guides(fill = "none") + scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0)) + ylab("Average Temperature (C°)") + theme_Publication()
 q
 
 #precipitation
 precip <- aggregate(data$Precip, by=list(data$season,data$Gradient), sum)
 colnames(precip) <- c("season","Gradient","Precip")
 
-p <-ggplot(precip, aes(Gradient, Precip)) +geom_bar(stat = "identity", aes(fill = season), position = "dodge")+ guides(fill = "none") +theme_classic() + scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0))
+p <-ggplot(precip, aes(Gradient, Precip, fill=season)) +geom_bar(stat = "identity", aes(fill = season), position = "dodge")+ scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0))+ylab("Precipitation (mm)") + theme_Publication()+ guides(fill = "none") 
 p
 
 
@@ -140,13 +142,20 @@ fit2 <- glm(RH/100 ~ micro * gradient, data=day.mean, family=binomial)
 anova(fit2, test="Chisq")
 
 ## stats for soil moisture
-census2016 <- read.csv("Data/ERG.census2016.csv")
+census <- read.csv("Data/ERG.phytometer.census.csv")
 
-m.swc <- glm(swc ~ Site * Microsite, data=subset(census2016, census=="end" & Site != "TejonRanch" & swc>0), family="Gamma")
-anova(m.swc, test="F")
+## soil moisture differences 2016
+swc2016 <- glm(swc ~ Site * Microsite, data=subset(census, Census=="emergence" & swc>0 & Year==2016), family="Gamma")
+anova(swc2016, test="F")
+
+## soil moisture differences 2017
+swc2017 <- glm(swc ~ Site * Microsite, data=subset(census, Census=="emergence" & swc>0 & Year==2017), family="Gamma")
+anova(swc2017, test="F")
+
+ggplot(census) + geom_boxplot(aes(x=Site, y= swc, fill=Microsite))  + facet_grid(~Year) +
+  scale_fill_brewer() +ylab("Soil Moisture COntent (%)")+ theme_Publication()
 ```
 
-### Site PCA
 
 ### site level means
 ```{r warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
@@ -274,39 +283,39 @@ mean.spp <- data.frame(mean.spp)
 
 ## sort to gradient from alphabetical
 alpha.grad <- c(4,2,5,1,6,7,3)
-mean.spp <- subset(mean.spp, Year==2016)
-mean.spp  <-mean.spp[order(alpha.grad),]
+mean.spp2016 <- subset(mean.spp, Year==2016)
+mean.spp2016  <-mean.spp[order(alpha.grad),]
 
 ## community responses 
-plot(gradient1.season1, mean.spp[,"richness"]) ## explains trends with one outlier
-m1 <- lm(richness~gradient1.season1, data=mean.spp)
+plot(gradient1.season1, mean.spp2016[,"richness"]) ## explains trends with one outlier
+m1 <- lm(richness~gradient1.season1, data=mean.spp2016)
 summary(m1)
 
-plot(gradient1.season1, mean.spp[,"abd"]) ## explains trends with one outlier
-m2 <- lm(abd~gradient1.season1, data=mean.spp) ## trend
+plot(gradient1.season1, mean.spp2016[,"abd"]) ## explains trends with one outlier
+m2 <- lm(abd~gradient1.season1, data=mean.spp2016) ## trend
 summary(m2)
 
-plot(gradient2.season1, mean.spp[,"biomass"]) ## explains trends with one outlier
-m3 <- lm(biomass~gradient1.season1, data=mean.spp) ## trend
+plot(gradient2.season1, mean.spp2016[,"biomass"]) ## explains trends with one outlier
+m3 <- lm(biomass~gradient1.season1, data=mean.spp2016) ## trend
 summary(m3)
 
-##season1
+##season2
 ## sort to gradient from alphabetical
 alpha.grad <- c(4,2,5,1,6,7,3)
 mean.spp <- subset(mean.spp, Year==2017)
 mean.spp  <-mean.spp[order(alpha.grad),]
 
-## community responses season1
+## community responses season2
 plot(gradient2.season2, mean.spp[,"richness"]) ## explains trends with one outlier
 m1 <- lm(richness~gradient1.season2, data=mean.spp)
 summary(m1)
 
 plot(gradient1.season2, mean.spp[,"abd"]) ## explains trends with one outlier
-m2 <- lm(abd~gradient1.season1, data=mean.spp) ## trend
+m2 <- lm(abd~gradient1.season2, data=mean.spp) ## trend
 summary(m2)
 
 plot(gradient1.season2, mean.spp[,"biomass"]) ## explains trends with one outlier
-m3 <- lm(biomass~gradient1.season1, data=mean.spp) ## trend
+m3 <- lm(biomass~gradient1.season2, data=mean.spp) ## trend
 summary(m3)
 ```
 
@@ -316,11 +325,11 @@ summary(m3)
 community <- read.csv("Data/ERG.communitydata.csv")
 community[is.na(community)] <- 0
 
-
+##2016
 ## add enviro data to dataframe
 comm2016 <- subset(community, Year==2016)
-site.vars[,"Site"] <- as.factor(row.names(site.vars))
-comm2016 <- merge(comm2016, site.vars, by="Site")
+site.vars2016[,"Site"] <- as.factor(row.names(site.vars2016))
+comm2016 <- merge(comm2016, site.vars2016, by="Site")
 
 ## transform spp data
 community.trans <- decostand(comm2016[,13:53], "hellinger")
@@ -337,45 +346,117 @@ plot(rda1, type="n", xlim=c(-1,1), ylim=c(-1.5,1.5))
 spp.priority <- colSums(comm2016[,13:53])
 
 ## plot RDA1
-colvec <- c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2")
-with(community, points(rda1, display = "sites", col = "black", pch = c(21), bg = colvec[Site]))
+colvec <- rep(c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2"),each=60)
+points(rda1, display = "sites", col = "black", pch = c(21), bg = colvec)
 orditorp(rda1, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=0.5)
 text(rda1,  display = "bp", col = "blue", cex = 0.8) 
-legend("bottomright", pch=c(21), legend=unique(comm2016$Site), pt.bg=colvec, cex=1)
+legend("bottomright", pch=c(21), legend=unique(comm2016$Site), pt.bg=unique(colvec), cex=1)
+## ordikplot to adjust species locations
+
+## 2017
+## add enviro data to dataframe
+comm2017 <- subset(community, Year==2017)
+site.vars[,"Site"] <- as.factor(row.names(site.vars))
+comm2017 <- merge(comm2017, site.vars, by="Site")
+
+## transform spp data
+community.trans <- decostand(comm2017[,13:53], "hellinger")
+
+rda2 <- rda(community.trans, comm2017[,54:59])
+(R2adj <- RsquareAdj(rda2)$adj.r.squared) ## 50.4% of variation explained
 
 
+## build byplot manually
+par(mar=c(4.5,4.5,0.5,0.5))
+plot(rda2, type="n", xlim=c(-1,1), ylim=c(-1.5,1.5))
+
+## calculate priority
+spp.priority <- colSums(comm2017[,13:53])
+
+## plot RDA2
+colvec <- rep(c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2"),each=60)
+points(rda2, display = "sites", col = "black", pch = c(21), bg = colvec)
+orditorp(rda2, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=0.5)
+text(rda2,  display = "bp", col = "blue", cex = 0.8) 
+legend("bottomright", pch=c(21), legend=unique(comm2016$Site), pt.bg=unique(colvec), cex=1)
+## ordikplot to adjust species locations
+
+```
+
+## Phytometer analysis
+```{r warning=FALSE, message=FALSE}
+
+census <- read.csv("Data/ERG.phytometer.census.csv")
+census[is.na(census)] <- 0
+census[,"phyto.abd"] <- rowSums(census[,c("Phacelia","Plantago","Salvia")])
+
+## calculate the number of seeds per gram
+seed.mass <- read.csv("Data/seed.mass.csv")
+seed.mass.avg <- seed.mass %>% group_by(species) %>%  summarize(avg.seed.gram=mean(seed.number),se.seed.gram=se(seed.number))
+seed.mass.avg <- data.frame(seed.mass.avg)
+seed.mass.avg
+
+## get proportion of seed germinated per 0.3 grams of seed
+census[,"Phacelia.prop"] <- census[,"Phacelia"]/(seed.mass.avg$avg.seed.gram[which(seed.mass.avg$species=="Phacelia")]*0.3)
+census[,"Plantago.prop"] <- census[,"Plantago"]/(seed.mass.avg$avg.seed.gram[which(seed.mass.avg$species=="Plantago")]*0.3)
+census[,"Salvia.prop"] <- census[,"Salvia"]/(seed.mass.avg$avg.seed.gram[which(seed.mass.avg$species=="Salvia")]*0.3)
+
+
+## beginning
+census.int <- subset(census, Census=="emergence")
+
+## all species
+m1 <- glm.nb(Phacelia~ Microsite * Nutrient * Site + Year, data=census.int)
+anova(m1, test="Chisq") ## Site * Micro and Year significant
+
+## Phacelia
+m1 <- glm.nb(Phacelia~ Microsite * Nutrient * Site + Year, data=census.int)
+anova(m1, test="Chisq") ## Site * Micro and Year significant
+## Plantago
+m2 <- glm.nb(Plantago~ Microsite * Nutrient * Site + Year, data=census.int)
+anova(m2, test="Chisq") ## Site * Micro and Year significant
+## Salvia
+m3 <- glm.nb(Salvia~ Microsite * Nutrient * Site + Year, data=census.int)
+anova(m3, test="Chisq") ## Site * Micro and Year significant + (micro x nutrient)
+
+census.int.plot <- gather(census.int, species, abundance, Phacelia:Salvia)
+
+##calculate confidence interval
+census.plot<- census.int.plot %>%  group_by(Microsite, species, Site) %>%  summarize(avg=mean(abundance),ci=se(abundance)*1.96)
+
+ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
+  geom_bar(position=position_dodge(), stat="identity")+
+   geom_errorbar(aes(ymin=avg-ci, ymax=avg+ci),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+ scale_fill_brewer() +ylab("Abundance")+ theme_Publication() + facet_grid(~Site) 
+
+## end season
+census.end <- subset(census, Census=="end")
+
+## run full model for phyto biomass
+m1 <- aov(log(phyto.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, phyto.biomass>0))
+summary(m1)
+TukeyHSD(m1, "Microsite")
+
+## all species end of season
+m2 <- glm.nb(phyto.abd~ Microsite * Nutrient * Site + Year, data=census.end)
+anova(m2, test="Chisq") ## Site and microsite*nutrient significant
+
+## run full model for phacelia biomass
+m3 <- aov(log(Phacelia)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Phacelia>0))
+summary(m3) ## site and microsite
+TukeyHSD(m3, "Microsite")
+
+
+## run full model for plantago biomass
+m4 <- aov(log(Plantago)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Plantago>0))
+summary(m4) ## site and year + sitexmicrosite
+TukeyHSD(m4, "Microsite")
 
 ```
 
 
-```{r warning=FALSE, message=FALSE}
-
-census2016 <- read.csv("Data/ERG.census2016.csv")
-
-## run full model for phyto biomass
-m1 <- aov(log(phyto.biomass)~ Site * Microsite * Nutrient, data=subset(census2016, census=="end" & phyto.biomass>0))
-summary(m1)
-TukeyHSD(m1, "Microsite")
-
-## run model but with abundance
-m2 <- glm.nb(abundance~ Site * Microsite * Nutrient, data=subset(census2016, census=="end" & phyto.biomass>0))
-anova(m2, test="Chisq")
-
-## repeat for ambient community biomass
-
-ambient2016 <- read.csv("Data/ERG.community2016.csv")
-
-m3 <- aov(log(Biomass)~ Site * Microsite, data=subset(ambient2016,Biomass>0))
-summary(m3)
-TukeyHSD(m1, "Microsite")
-
-## site composition of plants
-
-data <- ambient2016[,12:42]
-data[is.na(data)] <- 0
-
-
-
+```{r}
 ### RDA
 
 ##collect environmental variables for site
