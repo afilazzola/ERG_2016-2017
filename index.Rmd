@@ -554,3 +554,32 @@ plot(c(1:7),site.summary[,"stat"], xlim=c(0.5,7.5), ylim=c(-1,3), pch=19, cex=1.
 arrows(c(1:7),site.summary[,"ci.high"],c(1:7),site.summary[,"ci.low"], angle=90, code=3, length=0, lwd=2)
 abline(h=0, lty=2, lwd=2)
 axis(1, c(1:7), labels=site.names, cex.axis=1)
+```
+
+### Rii between years
+```{r}
+
+rii <- function(x, j, var)
+{
+s1 <- subset(x, Microsite == "shrub", select=var)
+o1 <- subset(x, Microsite == "open", select=var)
+return1 <- (s1 - o1) / (s1+o1)
+x1 <- x[seq(1, nrow(x), by = 2),]
+return2 <- cbind(x1[j], return1)
+return2[is.na(return2)] <- 0
+print(return2)
+}
+
+
+rii.dat <- rii(community, j=1:8, var=c("Abundance","Richness","Biomass"))
+
+rii.mean <- rii.dat %>% group_by(Year, Gradient, Site) %>% summarize(avg=mean(Biomass),se=se(Biomass))
+rii.mean <- data.frame(rii.mean)
+
+plot(rii.mean[rii.mean$Year==2016,"Gradient"]-.1,rii.mean[rii.mean$Year==2016,"avg"], ylim=c(-1,1), pch=19, cex=1.5, xlim=c(0.5,7.5), ylab="Rii Biomass", xlab="Site", xaxt="n", cex.lab=1.5)
+axis(1, 1:7, lab=unique(rii.mean$Site))
+error.bar(rii.mean[rii.mean$Year==2016,"Gradient"]-.1,rii.mean[rii.mean$Year==2016,"avg"],rii.mean[rii.mean$Year==2016,"se"])
+error.bar(rii.mean[rii.mean$Year==2017,"Gradient"]+.1,rii.mean[rii.mean$Year==2017,"avg"],rii.mean[rii.mean$Year==2017,"se"])
+points(rii.mean[rii.mean$Year==2017,"Gradient"]+.1,rii.mean[rii.mean$Year==2017,"avg"], pch=21, bg="Grey50", cex=1.5)
+abline(h=0, lwd=2, lty=2)
+legend(6.6,-0.65, c("2016","2017"), pch=22, pt.bg=c("Black","Grey50"), cex=1.6)
