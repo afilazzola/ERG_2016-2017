@@ -191,10 +191,13 @@ shrubs.vars <- shrubs.mean[,c("Site","Gradient","volume","canopy","Dx","DxEph","
 
 ##combine nutrients, weather, and shrub traits
 
-site.vars <- data.frame(weather.vars[,3:4],nutrients.vars[,c("N","K")])
+site.vars <- data.frame(weather.vars[,3:4],nutrients.vars[c("N","K")])
 row.names(site.vars) <- weather.vars[,1]
 site.vars[,"elevation"] <- site.gps[,"elevation"]
 cor(site.vars) ##check for correlation among variables, removed worldclim vars, other weather station data, and Phosphorus
+
+## remove nitrogen because of collinearirty?
+vifstep(site.vars, th=10)
 
 ## PCA of site characteristics
 
@@ -216,43 +219,84 @@ biplot(pca2)
 
 
 ## season1
-season1.mean <- season1 %>% group_by(Gradient,Site) %>% summarise(min.temp=mean(min.temp, na.rm=T),Precip=sum(Precip))
-season1.mean  <- data.frame(season1.mean )
+season1.mean <- season1 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip),min.temp=mean(min.temp, na.rm=T))
+season1.mean  <- data.frame(season1.mean)
 ## extract key variables
 ## dropped RH, and chose min.temp because least correlation with others & cold stress
 
 ##combine nutrients and long-term averages
-site.vars <- data.frame(season1.vars[,3:4],nutrients.vars[c("N","K")],clim.dat["Temp.Seasonality"],site.gps["elevation"]) ## drop Phosphorus and other climate variables because of correlations, 
+site.vars <- data.frame(season1.mean[,3:4],nutrients.vars["N"],site.gps["elevation"]) ## drop Phosphorus and other climate variables because of correlations, 
 row.names(site.vars) <- weather.vars[,1]
 cor(site.vars)
 site.vars2016 <- site.vars
 
+##  check for collinearity
+vifstep(site.vars, th=10) ## remove potassium and temperature minimum
+
 pca1 <- prcomp(log(abs(site.vars)), scale=T)
 plot(pca1)
 biplot(pca1)
-summary(pca1) ## 85% variation explained
+
+## check contribution of loadings
+pca1$rotation
+aload <- abs(pca1$rotation)
+sweep(aload, 2, colSums(aload), "/")
+
+summary(pca1) ## 89% variation explained
 gradient1.season1 <- pca1$x[,1]
 gradient2.season1 <- pca1$x[,2]
 
 ## season2
-season2.mean <- season2 %>% group_by(Gradient,Site) %>% summarise(min.temp=mean(min.temp, na.rm=T),Precip=sum(Precip))
-season2.mean  <- data.frame(season2.mean )
+season2.mean <- season2 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip, na.rm=T),min.temp=mean(min.temp, na.rm=T))
+season2.mean  <- data.frame(season2.mean)
 ## extract key variables
 ## dropped RH, and chose min.temp because least correlation with others & cold stress
 
 ##combine nutrients and long-term averages
-site.vars <- data.frame(season2.vars[,3:4],nutrients.vars[c("N","K")],clim.dat["Temp.Seasonality"],site.gps["elevation"]) ## drop Phosphorus and other climate variables because of correlations, 
+site.vars <- data.frame(season2.mean[,3:4],nutrients.vars["N"],site.gps["elevation"]) ## drop Phosphorus and other climate variables because of correlations, 
 row.names(site.vars) <- weather.vars[,1]
 cor(site.vars)
 site.vars2017 <- site.vars
 
+
+##  check for collinearity
+vifstep(site.vars, th=10) ## remove potassium and temperature minimum
+
+
 pca2 <- prcomp(log(abs(site.vars)), scale=T)
 plot(pca2)
 biplot(pca2)
-summary(pca2) ## 84% variation explained
+summary(pca2) ## 85% variation explained
+
+## check contribution of loadings
+pca2$rotation
+aload <- abs(pca2$rotation)
+sweep(aload, 2, colSums(aload), "/")
+
+
+## define gradients
 gradient1.season2 <- pca2$x[,1]
 gradient2.season2 <- pca2$x[,2]
 ```
+
+### Compare gradient to phytometer
+```{r}
+
+mean.phyto <- census %>% filter(Census=="end") %>%group_by(Year, Gradient, Site, Microsite) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+mean.phyto <- data.frame(mean.phyto)
+
+phyto.2016 <- subset(mean.phyto, Year==2016)
+
+plot(gradient1.season1, phyto.2016[phyto.2016$Microsite=="open","phyto.biomass"], ylim=c(0,2))
+points(gradient1.season1, phyto.2016[phyto.2016$Microsite=="shrub","phyto.biomass"], pch=19)
+
+phyto.2017 <- subset(mean.phyto, Year==2017)
+
+plot(gradient1.season2, phyto.2017[phyto.2017$Microsite=="open","phyto.biomass"], ylim=c(0,2))
+points(gradient1.season2, phyto.2017[phyto.2017$Microsite=="shrub","phyto.biomass"], pch=19)
+
+```
+
 
 ### Differences from Nutrient content
 ```{r}
@@ -334,7 +378,7 @@ comm2016 <- merge(comm2016, site.vars2016, by="Site")
 ## transform spp data
 community.trans <- decostand(comm2016[,13:53], "hellinger")
 
-rda1 <- rda(community.trans, comm2016[,54:59])
+rda1 <- rda(community.trans, comm2016[,54:58])
 (R2adj <- RsquareAdj(rda1)$adj.r.squared) ## 50.4% of variation explained
 
 
@@ -422,13 +466,13 @@ anova(m3, test="Chisq") ## Site * Micro and Year significant + (micro x nutrient
 census.int.plot <- gather(census.int, species, abundance, Phacelia:Salvia)
 
 ##calculate confidence interval
-census.plot<- census.int.plot %>%  group_by(Microsite, species, Site) %>%  summarize(avg=mean(abundance),ci=se(abundance)*1.96)
+census.plot<- census.int.plot %>%  group_by(Microsite, species, Site, Year) %>%  summarize(avg=mean(abundance),ci=se(abundance)*1.96)
 
 ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
   geom_bar(position=position_dodge(), stat="identity")+
    geom_errorbar(aes(ymin=avg-ci, ymax=avg+ci),
                   width=.2,                    # Width of the error bars
-                  position=position_dodge(.9))+ scale_fill_brewer() +ylab("Abundance")+ theme_Publication() + facet_grid(~Site) 
+                  position=position_dodge(.9))+ scale_fill_brewer() +ylab("Abundance")+ theme_Publication() + facet_grid(Year~Site) 
 
 ## end season
 census.end <- subset(census, Census=="end")
@@ -583,3 +627,21 @@ error.bar(rii.mean[rii.mean$Year==2017,"Gradient"]+.1,rii.mean[rii.mean$Year==20
 points(rii.mean[rii.mean$Year==2017,"Gradient"]+.1,rii.mean[rii.mean$Year==2017,"avg"], pch=21, bg="Grey50", cex=1.5)
 abline(h=0, lwd=2, lty=2)
 legend(6.6,-0.65, c("2016","2017"), pch=22, pt.bg=c("Black","Grey50"), cex=1.6)
+
+## add year column to precipitation data
+precip[,"Year"] <- ifelse(precip$season=="season.1","2016","2017")
+rii.precip <- merge(precip,rii.mean, by=c("Year","Gradient"))
+
+
+
+ihs <- function(x) {
+    y <- log(x + sqrt(x ^ 2 + 1))
+    return(y)
+}
+
+##
+plot(log(rii.precip[,"Precip"]), rii.precip[,"avg"])
+
+m1 <- lm(avg~ log(Precip), data=rii.precip)
+
+precip
