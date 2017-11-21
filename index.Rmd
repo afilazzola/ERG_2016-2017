@@ -42,6 +42,7 @@ library(MASS)
 library(ggplot2)
 library(tidyverse)
 library(ggthemes)
+library(usdm)
 ```
 
 
@@ -58,7 +59,7 @@ source("functions.r")
 ```
 
 ### Weather for growing season
-```{r echo=FALSE, fid.width=28}
+```{r echo=FALSE, fid.width=28, warning=FALSE, message=FALSE}
 
 ## weather station data
 
@@ -159,28 +160,17 @@ ggplot(census) + geom_boxplot(aes(x=Site, y= swc, fill=Microsite))  + facet_grid
 
 ### site level means
 ```{r warning=FALSE, message=FALSE, fig.width=8, fig.height=8}
-## long term climate data extracted from worldclim
+## site coordintes
 site.gps <- read.csv("Data/ERGsites.csv")
-
+# nutrient data for each site
+nutrients <- read.csv("Data/ERG.soilnutrients.csv")
+ ## long term climate data extracted from worldclim
 clim.dat <- read.csv("Data/ERG.worldclim.csv")
+
+
 ## check correlation among long-term climate variables
 cor(clim.dat[,3:8]) ## Temp.wettest.QR least correlated 
 
-## Obtain mean weather variables for each site
-weather <- read.csv("Data/ERG.climatedata.csv")
-
-weather.mean <- weather %>% group_by(Gradient,Site) %>% summarise_all(funs(mean), na.rm=T)
-weather.mean <- data.frame(weather.mean)
-## extract key variables
-weather.vars <- weather.mean[,c("Site","Gradient","avg.temp","Precip")]
-
-##check for colineararity
-cor(weather.vars[,3:5])
-
-## Obtain mean nutrient variables for each site
-nutrients <- read.csv("Data/ERG.soilnutrients.csv")
-nutrients.mean <- nutrients %>% group_by(gradient,site) %>% summarise_all(funs(mean))
-nutrients.vars <- data.frame(nutrients.mean)
 
 ## Obtain mean shrub traits for each site
 shrubs <- read.csv("Data/ERG.shrub.csv")
@@ -189,37 +179,23 @@ shrubs.mean <- shrubs %>% group_by(Gradient,Site) %>% summarise_all(funs(mean))
 shrubs.mean <- data.frame(shrubs.mean)
 shrubs.vars <- shrubs.mean[,c("Site","Gradient","volume","canopy","Dx","DxEph","Compaction")] 
 
-##combine nutrients, weather, and shrub traits
+## test correlation among shrub traits
+cor(shrubs.vars[,3:7]) ## compaction x volume & DxEph x Dx high correlation
 
-site.vars <- data.frame(weather.vars[,3:4],nutrients.vars[c("N","K")])
-row.names(site.vars) <- weather.vars[,1]
-site.vars[,"elevation"] <- site.gps[,"elevation"]
-cor(site.vars) ##check for correlation among variables, removed worldclim vars, other weather station data, and Phosphorus
-
-## remove nitrogen because of collinearirty?
-vifstep(site.vars, th=10)
-
-## PCA of site characteristics
-
-pca1 <- prcomp(log(site.vars), scale=T)
-plot(pca1)
-biplot(pca1, scale = T)
-summary(pca1) ## 87% variation explained
-
-## Extract PCA1 loadings for gradient. Negative values precipitation, postive nitrogen and avg.temp
-gradient.pca1 <- pca1$x[,1]
-gradient.pca2 <- pca1$x[,2]
+vifstep(shrubs.vars[,3:7], th=10) ## Dx showing collinearity problems
+shrub.site <- shrubs.vars[,-c(1,2,5)]
+rownames(shrub.site) <- shrubs.vars[,1]
 
 ## PCA of shrub characteristics
+pca1 <- prcomp(log(shrub.site), scale=T)
+plot(pca1)
+biplot(pca1, scale = T)
+summary(pca1) ## 77% variation explained
 
-row.names(shrubs.vars) <- shrubs.vars[,1]
-pca2 <- prcomp(log(shrubs.vars[,3:7]))
-plot(pca2)
-biplot(pca2)
 
-
-## season1
-season1.mean <- season1 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip),min.temp=mean(min.temp, na.rm=T))
+## PCA of site characteristics for season1
+## Obtain mean weather variables for each site
+season1.mean <- season1 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip),max.temp=mean(max.temp, na.rm=T))
 season1.mean  <- data.frame(season1.mean)
 ## extract key variables
 ## dropped RH, and chose min.temp because least correlation with others & cold stress
