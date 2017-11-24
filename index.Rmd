@@ -8,6 +8,8 @@ output:
     toc: yes
     toc_depth: 3
     toc_float: yes
+editor_options: 
+  chunk_output_type: console
 ---
 ###Ephedra regional gradient (ERG) analyses
 
@@ -90,6 +92,76 @@ p
 
 
 ```
+
+### Climate patterns within study
+```{r}
+season1.sjd <- season1 %>% filter(Gradient<4) %>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+season1.mnp <- season1 %>% filter(Gradient>3)%>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+season2.sjd <- season2 %>% filter(Gradient<4) %>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+season2.mnp <- season2 %>% filter(Gradient>3)%>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+
+## Rain vs Temperature in 2016
+par(mfrow=c(2,1))
+par(mar=c(1.5,4.5,1,4.5))
+plot1 <- barplot(height=season1.sjd$Precip, ylim=c(0,14), ylab="Average precipitation at all sites (cm)")
+points(plot1[,1], season1.sjd$min.temp, type="l", col="#FF000050", lwd=2)
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature at all sites (°C)", 4, line=3)
+par(mar=c(4.5,4.5,0,4.5))
+plot1 <- barplot(height=season1.mnp$Precip, ylim=c(0,14), ylab="Average precipitation at all sites (cm)")
+axis(1, plot1[c(1,30,60,90,120,150,180)], c("Nov","Dec","Jan","Feb","Mar","Apr","May"))
+points(plot1[,1], season1.mnp$min.temp, type="l", col="#FF000050", lwd=2)
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature at all sites (°C)", 4, line=3)
+
+
+## Rain vs Temperature in 2017
+par(mfrow=c(2,1))
+par(mar=c(1.5,4.5,1,4.5))
+plot2 <- barplot(height=season2.sjd$Precip, ylim=c(0,14), ylab="Average precipitation at all sites (cm)")
+points(plot2[,1], season2.sjd$min.temp, type="l", col="#FF000050", lwd=2)
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature at all sites (°C)", 4, line=3)
+par(mar=c(4.5,4.5,0,4.5))
+plot2 <- barplot(height=season2.mnp$Precip, ylim=c(0,14), ylab="Average precipitation at all sites (cm)")
+points(plot2[,1], season2.mnp$min.temp, type="l", col="#FF000050", lwd=2)
+axis(1, plot1[c(1,30,60,90,120,150,180)], c("Nov","Dec","Jan","Feb","Mar","Apr","May"))
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature at all sites (°C)", 4, line=3)
+
+### 2016 The rain was inconsistent and mostly absent in the Mojave. This resulted in low germination and producitivty at the southern sites
+### 2017 The rain was more plentiful, but in the northern sites, there appears to be a frost period after the majority of the rainfall. Need to check number of frost days
+
+season1.frost <- season1 %>% group_by(Site) %>% summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100)
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site) %>% summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100)
+data.frame(season2.frost)
+## Both years had comparable number of frost days
+
+## Compare number of consecutive frost days (i.e. frost periods)
+season1[,"frost"] <- ifelse(season1$min.temp<0, -99,season1$min.temp) ## identified days below freezing
+season2[,"frost"] <- ifelse(season2$min.temp<0, -99,season2$min.temp) ## identified days below freezing
+count.consec <- function(x) {max(rle(as.character(x))$lengths)}
+
+season1.frost <- season1 %>% group_by(Site)  %>% summarize(count.consec(frost))
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site) %>% summarize(count.consec(frost))
+data.frame(season2.frost)
+
+## compare only after plants have germinated
+season1.frost <- season1 %>% group_by(Site) %>% filter(year>2015) %>% summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100, avg.min.temp=mean(min.temp, na.rm=T))
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site) %>%  filter(year>2016) %>%  summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100,avg.min.temp=mean(min.temp, na.rm=T))
+data.frame(season2.frost)
+
+season1.frost <- season1 %>% group_by(Site)  %>% filter(year>2015) %>% summarize(count.consec(frost))
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site)  %>%  filter(year>2016)%>% summarize(count.consec(frost))
+data.frame(season2.frost)
+
+```
+
+
 
 ### Microenvironmental differences
 
@@ -195,7 +267,6 @@ clim.dat <- read.csv("Data/ERG.worldclim.csv")
 ## check correlation among long-term climate variables
 cor(clim.dat[,3:8]) ## Temp.wettest.QR least correlated 
 
-
 ## Obtain mean shrub traits for each site
 shrubs <- read.csv("Data/ERG.shrub.csv")
 shrubs <- subset(shrubs, Microsite=="shrub")
@@ -219,14 +290,14 @@ summary(pca1) ## 77% variation explained
 
 ## PCA of site characteristics for season1
 ## Obtain mean weather variables for each site
-season1.mean <- season1 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip),max.temp=mean(max.temp, na.rm=T))
+season1.mean <- season1 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip),wind=mean(wind.speed, na.rm=T))
 season1.mean  <- data.frame(season1.mean)
 ## extract key variables
 ## dropped RH, and chose min.temp because least correlation with others & cold stress
 
 ##combine nutrients and long-term averages
-site.vars <- data.frame(season1.mean[,3:4],nutrients.vars["N"],site.gps["elevation"]) ## drop Phosphorus and other climate variables because of correlations, 
-row.names(site.vars) <- weather.vars[,1]
+site.vars <- data.frame(season1.mean[,3:5],site.gps["elevation"]) ## drop Phosphorus and other climate variables because of correlations, 
+row.names(site.vars) <- shrubs.vars[,1]
 cor(site.vars)
 site.vars2016 <- site.vars
 
@@ -247,14 +318,14 @@ gradient1.season1 <- pca1$x[,1]
 gradient2.season1 <- pca1$x[,2]
 
 ## season2
-season2.mean <- season2 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip, na.rm=T),min.temp=mean(min.temp, na.rm=T))
+season2.mean <- season2 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip, na.rm=T),wind=mean(wind.speed, na.rm=T))
 season2.mean  <- data.frame(season2.mean)
 ## extract key variables
 ## dropped RH, and chose min.temp because least correlation with others & cold stress
 
 ##combine nutrients and long-term averages
-site.vars <- data.frame(season2.mean[,3:4],nutrients.vars["N"],site.gps["elevation"]) ## drop Phosphorus and other climate variables because of correlations, 
-row.names(site.vars) <- weather.vars[,1]
+site.vars <- data.frame(season2.mean[,3:5],site.gps["elevation"]) ## drop Phosphorus and other climate variables because of correlations, 
+row.names(site.vars) <-  shrubs.vars[,1]
 cor(site.vars)
 site.vars2017 <- site.vars
 
@@ -285,14 +356,23 @@ gradient2.season2 <- pca2$x[,2]
 mean.phyto <- census %>% filter(Census=="end") %>%group_by(Year, Gradient, Site, Microsite) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
 mean.phyto <- data.frame(mean.phyto)
 
+season1.mean <- season1 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip),wind=mean(wind.speed, na.rm=T), max.temp=abs(mean(max.temp, na.rm=T)))
+s1.mean <- data.frame(season1.mean)
+
+season2.mean <- season2 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip, na.rm=T),wind=mean(wind.speed, na.rm=T), max.temp=abs(mean(max.temp, na.rm=T)))
+s2.mean <- data.frame(season2.mean)
+
+gradient1.season1 <- (s1.mean[,"Precip"]-s1.mean[,"max.temp"])/10
+gradient1.season2 <- (s2.mean[,"Precip"]-s2.mean[,"max.temp"])/10
+
 phyto.2016 <- subset(mean.phyto, Year==2016)
 
-plot(gradient1.season1, phyto.2016[phyto.2016$Microsite=="open","phyto.biomass"], ylim=c(0,2))
-points(gradient1.season1, phyto.2016[phyto.2016$Microsite=="shrub","phyto.biomass"], pch=19)
+plot(gradient1.season1+1, phyto.2016[phyto.2016$Microsite=="open","phyto.biomass"], ylim=c(0,2))
+points(gradient1.season1-1, phyto.2016[phyto.2016$Microsite=="shrub","phyto.biomass"], pch=19)
 
 phyto.2017 <- subset(mean.phyto, Year==2017)
 
-plot(gradient1.season2, phyto.2017[phyto.2017$Microsite=="open","phyto.biomass"], ylim=c(0,2))
+plot(gradient1.season2, phyto.2017[phyto.2017$Microsite=="open","phyto.biomass"], ylim=c(0,3))
 points(gradient1.season2, phyto.2017[phyto.2017$Microsite=="shrub","phyto.biomass"], pch=19)
 
 ```
@@ -378,7 +458,7 @@ comm2016 <- merge(comm2016, site.vars2016, by="Site")
 ## transform spp data
 community.trans <- decostand(comm2016[,13:53], "hellinger")
 
-rda1 <- rda(community.trans, comm2016[,54:58])
+rda1 <- rda(community.trans, comm2016[,54:57])
 (R2adj <- RsquareAdj(rda1)$adj.r.squared) ## 50.4% of variation explained
 
 
@@ -402,28 +482,28 @@ legend("bottomright", pch=c(21), legend=unique(comm2016$Site), pt.bg=unique(colv
 comm2017 <- subset(community, Year==2017)
 site.vars[,"Site"] <- as.factor(row.names(site.vars))
 comm2017 <- merge(comm2017, site.vars, by="Site")
-
-## transform spp data
-community.trans <- decostand(comm2017[,13:53], "hellinger")
-
-rda2 <- rda(community.trans, comm2017[,54:59])
-(R2adj <- RsquareAdj(rda2)$adj.r.squared) ## 50.4% of variation explained
-
-
-## build byplot manually
-par(mar=c(4.5,4.5,0.5,0.5))
-plot(rda2, type="n", xlim=c(-1,1), ylim=c(-1.5,1.5))
-
-## calculate priority
-spp.priority <- colSums(comm2017[,13:53])
-
-## plot RDA2
-colvec <- rep(c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2"),each=60)
-points(rda2, display = "sites", col = "black", pch = c(21), bg = colvec)
-orditorp(rda2, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=0.5)
-text(rda2,  display = "bp", col = "blue", cex = 0.8) 
-legend("bottomright", pch=c(21), legend=unique(comm2016$Site), pt.bg=unique(colvec), cex=1)
-## ordikplot to adjust species locations
+# 
+# ## transform spp data
+# community.trans <- decostand(comm2017[,13:53], "hellinger")
+# 
+# rda2 <- rda(community.trans, comm2017[,54:58])
+# (R2adj <- RsquareAdj(rda2)$adj.r.squared) ## 50.4% of variation explained
+# 
+# 
+# ## build byplot manually
+# par(mar=c(4.5,4.5,0.5,0.5))
+# plot(rda2, type="n", xlim=c(-1,1), ylim=c(-1.5,1.5))
+# 
+# ## calculate priority
+# spp.priority <- colSums(comm2017[,13:53])
+# 
+# ## plot RDA2
+# colvec <- rep(c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2"),each=60)
+# points(rda2, display = "sites", col = "black", pch = c(21), bg = colvec)
+# orditorp(rda2, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=0.5)
+# text(rda2,  display = "bp", col = "blue", cex = 0.8) 
+# legend("bottomright", pch=c(21), legend=unique(comm2016$Site), pt.bg=unique(colvec), cex=1)
+# ## ordikplot to adjust species locations
 
 ```
 
@@ -476,6 +556,7 @@ ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
 
 ## end season
 census.end <- subset(census, Census=="end")
+census.end[,"Year"] <- as.factor(census.end$Year)
 
 ## run full model for phyto biomass
 m1 <- aov(log(phyto.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, phyto.biomass>0))
@@ -487,79 +568,115 @@ m2 <- glm.nb(phyto.abd~ Microsite * Nutrient * Site + Year, data=census.end)
 anova(m2, test="Chisq") ## Site and microsite*nutrient significant
 
 ## run full model for phacelia biomass
-m3 <- aov(log(Phacelia)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Phacelia>0))
+m3 <- aov(log(Phacelia.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Phacelia.biomass>0))
 summary(m3) ## site and microsite
 TukeyHSD(m3, "Microsite")
 
 
 ## run full model for plantago biomass
-m4 <- aov(log(Plantago)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Plantago>0))
+m4 <- aov(log(Plantago.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Plantago.biomass>0))
 summary(m4) ## site and year + sitexmicrosite
 TukeyHSD(m4, "Microsite")
+
+
+## run full model for plantago biomass
+m5 <- aov(log(Salvia.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Salvia.biomass>0))
+summary(m5) ## site and year + sitexmicrosite
+TukeyHSD(m5, "Microsite")
+
+## run full model for phacelia abundance
+m6 <- glm.nb(Phacelia.biomass~ Site * Microsite * Nutrient + Year, data=subset(census.end, Phacelia>0))
+summary(m3) ## site and microsite
+TukeyHSD(m3, "Microsite")
+
+
+## run full model for plantago biomass
+m7 <- aov(log(Plantago)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Plantago>0))
+summary(m4) ## site and year + sitexmicrosite
+TukeyHSD(m4, "Microsite")
+
+
+## run full model for plantago biomass
+m8 <- aov(log(Salvia)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Salvia>0))
+summary(m5) ## site and year + sitexmicrosite
+TukeyHSD(m5, "Microsite")
+
+
+census.end.plot <- gather(census.end, species, biomass, Phacelia.biomass:Salvia.biomass)
+
+##calculate confidence interval
+census.plot<- census.end.plot %>%  group_by(Microsite, species, Site, Year) %>%  summarize(avg=mean(biomass),ci=se(biomass)*1.96)
+
+ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
+  geom_bar(position=position_dodge(), stat="identity")+
+   geom_errorbar(aes(ymin=avg-ci, ymax=avg+ci),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+ scale_fill_brewer() +ylab("Abundance")+ theme_Publication() + facet_grid(Year~Site) 
+
 
 ```
 
 
 ```{r}
 ### RDA
-
-##collect environmental variables for site
-nutrients <- read.csv("Data/ERG.soilnutrients.csv")
-nutrients.mean <- nutrients %>% group_by(gradient,site, microsite) %>% summarise_each(funs(mean))
-nutrients.vars <- data.frame(nutrients.mean)
-
-## minimum explanation of variables
-ambient2016[is.na(ambient2016)] <- 0
-community <- ambient2016 %>% group_by(Gradient,Site, Microsite) %>% summarise_each(funs(sum))
-community <- data.frame(community)
-
-end.census <- subset(census2016, census=="end")
-end.census  <- end.census  %>% group_by(Gradient,Site, Microsite) %>% summarise_each(funs(mean))
-end.census<- data.frame(end.census)
-
-## daily means
-daily.mean <- aggregate(. ~ season * exp.day * Microsite * Site, data=HOBO.data, na.action=na.omit, mean)
-
-## summarize daily means across sites
-means <- daily.mean %>% group_by(season,Microsite, Gradient) %>% summarize(temp=mean(Temp, na.rm=T),rh=mean(RH, na.rm=T),temp.se=se(Temp, na.rm=T),rh.se=se(RH, na.rm=T))
-means <- data.frame(means)
-
-
-envs <- data.frame(swc=end.census[,"swc"],nutrients.vars[,c("N","P","K")], means[,c("temp","rh")])
-
-## hellinger transformation
-community.trans <- decostand(community[,12:42], "hellinger")
-
-## rda with environmental variables
-rda1 <- rda(community.trans, envs)
-anova(rda1)
-(R2adj <- RsquareAdj(rda1)$adj.r.squared) ## 25.7% of variation explained
-
-
-## build byplot manually
-par(mar=c(4.5,4.5,0.5,0.5))
-plot(rda1, type="n", xlim=c(-1,1))
-
-with(community, levels(Site))
-
-spp.priority <- colSums(community[,12:42])
-
-colvec <- c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2")
-with(community, points(rda1, display = "sites", col = "black", pch = c(21,22), bg = colvec[Site]))
-orditorp(rda1, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=1,)
-text(rda1,  display = "bp", col = "blue", cex = 0.8) 
-legend("bottomright", pch=c(21), legend=community$Site[community$Microsite=="shrub"], pt.bg=colvec, cex=1)
-
-## check variable explanation
-vif.cca(rda1)
-
-v.clim <- cbind(envs[,c("temp","rh")])
-v.nut <- cbind(envs[,c("N","P","K")])
-v.swc <- envs[,"swc"]
-
-x <- varpart(community.trans,v.clim,v.nut,v.swc)
-
-showvarparts(3)
+# 
+# ##collect environmental variables for site
+# nutrients <- read.csv("Data/ERG.soilnutrients.csv")
+# nutrients.mean <- nutrients %>% group_by(gradient,site, microsite) %>% summarise_each(funs(mean))
+# nutrients.vars <- data.frame(nutrients.mean)
+# 
+# ## minimum explanation of variables
+# ambient2016[is.na(ambient2016)] <- 0
+# community <- ambient2016 %>% group_by(Gradient,Site, Microsite) %>% summarise_each(funs(sum))
+# community <- data.frame(community)
+# 
+# end.census <- subset(census2016, census=="end")
+# end.census  <- end.census  %>% group_by(Gradient,Site, Microsite) %>% summarise_each(funs(mean))
+# end.census<- data.frame(end.census)
+# 
+# ## daily means
+# day.mean <- aggregate(HOBO.data, by=list(day=HOBO.data$Day, micro=HOBO.data$Microsite, site=HOBO.data$Site), mean)
+# 
+# ## summarize daily means across sites
+# means <- day.mean %>% group_by(gradient, micro) %>% summarize(temp=mean(Temp),rh=mean(RH),temp.se=se(Temp),rh.se=se(RH))
+# means <- data.frame(means)
+# 
+# 
+# envs <- data.frame(swc=end.census[,"swc"],nutrients.vars[,c("N","P","K")], means[,c("temp","rh")])
+# 
+# ## hellinger transformation
+# community.trans <- decostand(community[,12:42], "hellinger")
+# 
+# ## rda with environmental variables
+# rda1 <- rda(community.trans, envs)
+# anova(rda1)
+# (R2adj <- RsquareAdj(rda1)$adj.r.squared) ## 25.7% of variation explained
+# 
+# 
+# ## build byplot manually
+# par(mar=c(4.5,4.5,0.5,0.5))
+# plot(rda1, type="n", xlim=c(-1,1))
+# 
+# with(community, levels(Site))
+# 
+# spp.priority <- colSums(community[,12:42])
+# 
+# colvec <- c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2")
+# with(community, points(rda1, display = "sites", col = "black", pch = c(21,22), bg = colvec[Site]))
+# orditorp(rda1, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=1,)
+# text(rda1,  display = "bp", col = "blue", cex = 0.8) 
+# legend("bottomright", pch=c(21), legend=community$Site[community$Microsite=="shrub"], pt.bg=colvec, cex=1)
+# 
+# ## check variable explanation
+# vif.cca(rda1)
+# 
+# v.clim <- cbind(envs[,c("temp","rh")])
+# v.nut <- cbind(envs[,c("N","P","K")])
+# v.swc <- envs[,"swc"]
+# 
+# x <- varpart(community.trans,v.clim,v.nut,v.swc)
+# 
+# showvarparts(3)
 ```
 
 
@@ -571,14 +688,15 @@ library(bootES)
 
 effect.cal <- function(x){ bootES(x, R=999, data.col="Biomass", group.col="Microsite", contrast=c(shrub=1,open=-1), effect.type=c("cohens.d"))}
 
-effect.site <- by(subset(ambient2016, Site != "Barstow"), ambient2016$Site[ambient2016$Site != "Barstow"], FUN=effect.cal)
+effect.site <- by(subset(comm2016, Site != "Barstow"), comm2016$Site[comm2016$Site != "Barstow"], FUN=effect.cal)
 
 site.summary <- rbind(summary(effect.site$Panoche),summary(effect.site$Cuyama),summary(effect.site$TejonRanch),data.frame(stat=0,ci.low=0,ci.high=0,bias=0,std.error=0),summary(effect.site$MojavePreserve),summary(effect.site$SheepholeValley),summary(effect.site$Tecopa)) 
-
+site.summary[5,] <- 0
+site.summary <- sapply(site.summary, as.numeric)
 
 par(mar=c(4.5,4.5,.5,.5))
 plot(c(1:7),site.summary[,"stat"], xlim=c(0.5,7.5), ylim=c(-1,3), pch=19, cex=1.4, ylab="Hedge's G", xlab="", xaxt="n")
-arrows(c(1:7),site.summary[,"ci.high"],c(1:7),site.summary[,"ci.low"], angle=90, code=3, length=0, lwd=2)
+arrows(c(1:7),as.numeric(site.summary[,"ci.high"]),c(1:7),site.summary[,"ci.low"], angle=90, code=3, length=0, lwd=2)
 abline(h=0, lty=2, lwd=2)
 axis(1, c(1:7), labels=site.names, cex.axis=1)
 
@@ -586,12 +704,12 @@ axis(1, c(1:7), labels=site.names, cex.axis=1)
 
 effect.cal <- function(x){ bootES(x, R=999, data.col="phyto.biomass", group.col="Microsite", contrast=c(shrub=1,open=-1), effect.type=c("cohens.d"))}
 
-census2016 <- subset(census2016, census=="end")
+census2016 <- subset(census, Census=="end" & Year ==2016)
 
 effect.site <- by(subset(census2016, Site != "Barstow"), census2016$Site[census2016$Site != "Barstow"], FUN=effect.cal)
 
 site.summary <- rbind(summary(effect.site$Panoche),summary(effect.site$Cuyama),summary(effect.site$TejonRanch),data.frame(stat=0,ci.low=0,ci.high=0,bias=0,std.error=0),summary(effect.site$MojavePreserve),summary(effect.site$SheepholeValley),summary(effect.site$Tecopa)) 
-
+site.summary <- sapply(site.summary, as.numeric)
 
 par(mar=c(4.5,4.5,.5,.5))
 plot(c(1:7),site.summary[,"stat"], xlim=c(0.5,7.5), ylim=c(-1,3), pch=19, cex=1.4, ylab="Hedge's G", xlab="", xaxt="n")
@@ -639,9 +757,8 @@ ihs <- function(x) {
     return(y)
 }
 
-##
-plot(log(rii.precip[,"Precip"]), rii.precip[,"avg"])
+## Precipitation vs Rii
+plot(log(rii.precip[,"Precip"]), rii.precip[,"avg"], ylab= "RII", xlab="log precipitation Precipitation", pch=19, cex=1.5, cex.lab=1.5, cex.axis=1.3)
+abline(h=0, lwd=2, lty=2)
 
-m1 <- lm(avg~ log(Precip), data=rii.precip)
-
-precip
+m1 <- lm(rii.precip[,"avg"] ~ rii.precip[,"Precip"])
