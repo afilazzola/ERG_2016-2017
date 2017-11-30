@@ -54,7 +54,7 @@ stop("vectors must be same length")
 arrows(x,y+upper, x, y-lower, angle=90, code=3, length=length, ...)
 }
 
-se <- function(x) sd(x)/sqrt(length(x)) ## standard error
+se <- function(x, ...) sd(x)/sqrt(length(x)) ## standard error
 
 source("functions.r")
 
@@ -193,11 +193,19 @@ for(i in 1:7){
   HOBO.data[grep(sites[i], as.character(HOBO.data$Site)), "gradient"] <- psuedograd[i]
 }
 
+## add season column
+HOBO.data[,"season"] <- ifelse(HOBO.data$Year==2016 & HOBO.data$Month < 5 | HOBO.data$Year==2015, "season1","season2")
+
+## add experimental date column
+HOBO.data[,"date"] <- as.Date(paste(HOBO.data[,"Year"],"/",HOBO.data[,"Month"],"/",HOBO.data[,"Day"], sep=""), "%Y/%m/%d")
+join.date <- data.frame(date=unique(HOBO.data$date),exp.day=c(seq(1,159,1),seq(1,152,1)))
+HOBO.data <- merge(HOBO.data, join.date, by="date")
+
 ## daily means
-day.mean <- aggregate(HOBO.data, by=list(day=HOBO.data$Day, micro=HOBO.data$Microsite, site=HOBO.data$Site), mean)
+daily.mean <- aggregate(. ~ season * exp.day * Microsite * Site, data=HOBO.data, na.action=na.omit, mean)
 
 ## summarize daily means across sites
-means <- day.mean %>% group_by(micro, gradient) %>% summarize(temp=mean(Temp),rh=mean(RH),temp.se=se(Temp),rh.se=se(RH))
+means <- daily.mean %>% group_by(season,Microsite, Gradient) %>% summarize(temp=mean(Temp, na.rm=T),rh=mean(RH, na.rm=T),temp.se=se(Temp, na.rm=T),rh.se=se(RH, na.rm=T))
 means <- data.frame(means)
 
 par(mar=c(4.5,4.5,.5,.5))
@@ -206,30 +214,46 @@ par(mar=c(4.5,4.5,.5,.5))
 site.name <- sites[order(psuedograd)]
 
 
-par(mfrow=c(1,2))
-## plot temperature
-plot(c(1:7)-0.1, means[means$micro=="shrub","temp"], pch=19, ylim=c(5,15), xlab="", xaxt="n", ylab="temperature (C°)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
+par(mfrow=c(2,2))
+## plot temperature season1
+plot(c(1:7)-0.1, means[means$Microsite=="shrub" & means$season=="season1","temp"], pch=19, ylim=c(5,15), xlab="", xaxt="n", ylab="temperature (C°)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
 axis(1, c(1:7), site.name, cex.axis=1.2)
-error.bar(c(1:7)-0.1, means[means$micro=="shrub","temp"],means[means$micro=="shrub","temp.se"]*2, lwd=2)
-error.bar(c(1:7)+0.1, means[means$micro=="open","temp"],means[means$micro=="open","temp.se"]*2, lwd=2)
-points(c(1:7)+0.1, means[means$micro=="open","temp"], pch=21, bg="White", cex=1.5)
+error.bar(c(1:7)-0.1, means[means$Microsite=="shrub" & means$season=="season1","temp"],means[means$Microsite=="shrub" & means$season=="season1","temp.se"]*2, lwd=2)
+error.bar(c(1:7)+0.1, means[means$Microsite=="open" & means$season=="season1","temp"],means[means$Microsite=="open" & means$season=="season1","temp.se"]*2, lwd=2)
+points(c(1:7)+0.1, means[means$Microsite=="open" & means$season=="season1","temp"], pch=21, bg="White", cex=1.5)
 
-## plot relative humidity
-plot(c(1:7)-0.1, means[means$micro=="shrub","rh"], pch=19, ylim=c(30,100), xlab="", xaxt="n", ylab="relative humidity (%)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
+## plot relative humidity season1
+plot(c(1:7)-0.1, means[means$Microsite=="shrub"& means$season=="season1","rh"], pch=19, ylim=c(30,100), xlab="", xaxt="n", ylab="relative humidity (%)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
 axis(1, c(1:7), site.name, cex.axis=1.2)
-error.bar(c(1:7)-0.1, means[means$micro=="shrub","rh"],means[means$micro=="shrub","rh.se"]*2, lwd=2)
-error.bar(c(1:7)+0.1, means[means$micro=="open","rh"],means[means$micro=="open","rh.se"]*2, lwd=2)
-points( c(1:7)+0.1, means[means$micro=="open","rh"], pch=21, bg="White", cex=1.5)
+error.bar(c(1:7)-0.1, means[means$Microsite=="shrub"& means$season=="season1","rh"],means[means$Microsite=="shrub"& means$season=="season1","rh.se"]*2, lwd=2)
+error.bar(c(1:7)+0.1, means[means$Microsite=="open"& means$season=="season1","rh"],means[means$Microsite=="open"& means$season=="season1","rh.se"]*2, lwd=2)
+points( c(1:7)+0.1, means[means$Microsite=="open"& means$season=="season1","rh"], pch=21, bg="White", cex=1.5)
 legend(5.8,100, c("shrub","open"), pch=21, pt.bg=c("black","white"), bty="n", cex=2)
 
+## plot temperature season 2
+plot(c(1:7)-0.1, means[means$Microsite=="shrub" & means$season=="season2","temp"], pch=19, ylim=c(5,15), xlab="", xaxt="n", ylab="temperature (C°)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
+axis(1, c(1:7), site.name, cex.axis=1.2)
+error.bar(c(1:7)-0.1, means[means$Microsite=="shrub" & means$season=="season2","temp"],means[means$Microsite=="shrub" & means$season=="season2","temp.se"]*2, lwd=2)
+error.bar(c(1:7)+0.1, means[means$Microsite=="open" & means$season=="season2","temp"],means[means$Microsite=="open" & means$season=="season2","temp.se"]*2, lwd=2)
+points(c(1:7)+0.1, means[means$Microsite=="open" & means$season=="season2","temp"], pch=21, bg="White", cex=1.5)
+
+## plot relative humidity season 2
+plot(c(1:7)-0.1, means[means$Microsite=="shrub"& means$season=="season2","rh"], pch=19, ylim=c(30,100), xlab="", xaxt="n", ylab="relative humidity (%)", cex.axis=1.3, cex.lab=1.5, cex=1.5, xlim=c(0.7,7.3))
+axis(1, c(1:7), site.name, cex.axis=1.2)
+error.bar(c(1:7)-0.1, means[means$Microsite=="shrub"& means$season=="season2","rh"],means[means$Microsite=="shrub"& means$season=="season2","rh.se"]*2, lwd=2)
+error.bar(c(1:7)+0.1, means[means$Microsite=="open"& means$season=="season2","rh"],means[means$Microsite=="open"& means$season=="season2","rh.se"]*2, lwd=2)
+points( c(1:7)+0.1, means[means$Microsite=="open"& means$season=="season2","rh"], pch=21, bg="White", cex=1.5)
+legend(5.8,100, c("shrub","open"), pch=21, pt.bg=c("black","white"), bty="n", cex=2)
+
+
 ## stats for temperature
-day.mean[,"gradient"] <- as.factor(day.mean$gradient)
-fit1 <- aov(log(Temp) ~ micro * gradient, data=day.mean)
+daily.mean[,"gradient"] <- as.factor(daily.mean$gradient)
+fit1 <- aov(log(Temp) ~ Microsite * gradient, data=daily.mean)
 shapiro.test(fit1$residuals) ## check normality
 summary(fit1)
 
 ## stats for relative humidity
-fit2 <- glm(RH/100 ~ micro * gradient, data=day.mean, family=binomial)
+fit2 <- glm(RH/100 ~ Microsite * gradient, data=daily.mean, family=binomial)
 anova(fit2, test="Chisq")
 
 ## stats for soil moisture
@@ -838,7 +862,6 @@ TukeyHSD(m4, "Microsite")
 m5 <- aov(log(Salvia.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Salvia.biomass>0))
 summary(m5) ## site and year + sitexmicrosite
 TukeyHSD(m5, "Microsite")
-
 
 ## run full model for phacelia abundance
 m6 <- glm.nb(Phacelia.biomass~ Site * Microsite * Nutrient + Year, data=subset(census.end, Phacelia>0))
