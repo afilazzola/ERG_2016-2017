@@ -387,6 +387,8 @@ gradient2.season2 <- pca2$x[,2]
 arid.vals <- read.csv("Data/aridity.PET.csv")
 colnames(arid.vals)[1] <- "Site"
 
+
+par(mfrow=c(1,2))
 mean.phyto <- census %>% filter(Census=="end") %>%group_by(Year, Gradient, Site, Microsite) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
 mean.phyto <- data.frame(mean.phyto)
 
@@ -419,10 +421,13 @@ points(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"],2), phyto
 
 plot(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"], rii.mean[rii.mean$Year==2016,"phyto.biomass"], ylim=c(-0.4,0.4))
 
+
+
 phyto.2017 <- subset(mean.phyto, Year==2017)
 
 plot(jitter(phyto.2017[phyto.2017$Microsite=="open","arid.gradient"],1), phyto.2017[phyto.2017$Microsite=="open","phyto.biomass"], ylim=c(0,3))
 points(jitter(phyto.2017[phyto.2017$Microsite=="open","arid.gradient"],2), phyto.2017[phyto.2017$Microsite=="shrub","phyto.biomass"], pch=19)
+
 
 ## Phacelia season 1
 plot(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,1), phyto.2016[phyto.2016$Microsite=="open","Phacelia.biomass"], ylim=c(0,2))
@@ -521,7 +526,6 @@ points(rii.mean[,"arid.gradient"], rii.mean[,"Salvia.biomass"], pch=21, bg="red"
 abline(h=0, lty=2, lwd=2)
 
 
-
 ## compare convex hull
 ## hull function
 Plot_ConvexHull<-function(xcoord, ycoord, lcolor){
@@ -605,20 +609,46 @@ m3 <- lm(Salvia.biomass~arid.gradient, data=rii.mean)
 
 ### Differences from Nutrient content
 ```{r}
+## join aridity with nutrients
+nutrients.climate <- merge(nutrients,subset(site.climate, Year==2016), by=c("Site"))
+
+
 ## Nitrogen difference between shrub and sites
-m.nit <- aov(log(N) ~ site * microsite, data=nutrients)
+m.nit <- aov(log(N) ~ Site * microsite, data=nutrients)
 summary(m.nit)
 TukeyHSD(m.nit, "microsite")
 
 ## Potassium difference between shrub and sites
-m.pot <- aov(log(K) ~ site * microsite, data=nutrients)
+m.pot <- aov(log(K) ~ Site * microsite, data=nutrients)
 summary(m.pot)
 TukeyHSD(m.pot, "microsite")
 
 ## Phosphorus difference between shrub and sites
-m.pho <- aov(log(P) ~ site * microsite, data=nutrients)
+m.pho <- aov(log(P) ~ Site * microsite, data=nutrients)
 summary(m.pho)
 TukeyHSD(m.pho, "microsite")
+
+nutrient.mean <- nutrients.climate %>% group_by(Site, arid.gradient) %>% summarize(nitrogen=mean(N), phosphorus=mean(P), potassium=mean(K))
+nutrient.mean <- data.frame(nutrient.mean)
+ 
+
+ggplot(nutrient.mean) + geom_jitter(aes(x=arid.gradient, y=nitrogen), color="#E69F00", size=3) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=nitrogen), color="#E69F00") + geom_jitter(aes(x=arid.gradient, y=potassium/20), color="#56B4E9", size=3) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=potassium/20), color="#56B4E9") + geom_jitter(aes(x=arid.gradient, y=phosphorus), color="#009E73", size=3) +ylab("soil nutrient content")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) + xlab("aridity gradient")+
+annotate("segment", x = -4.5, xend = -4.35, y = 25, yend = 25,  colour = "#E69F00", size=2) + ## add custom legend
+  annotate("text", x = -4.3, y = 25,  label = "Nitrogen", size=5, hjust=0)+
+annotate("segment", x = -4.5, xend = -4.35, y = 23, yend = 23,  colour = "#56B4E9", size=2) + ## add custom legend
+  annotate("text", x = -4.3, y = 23,  label = "Potassium", size=5, hjust=0)+
+annotate("segment", x = -4.5, xend = -4.35, y = 21, yend = 21,  colour = "#009E73", size=2) + ## add custom legend
+  annotate("text", x = -4.3, y = 21,  label = "Phosphorus", size=5, hjust=0)
+
+
+m1 <- lm(nitrogen~poly(arid.gradient,2), data=nutrient.mean)
+summary(m1)
+
+m2 <- lm(phosphorus~arid.gradient, data=nutrient.mean)
+summary(m2)
+
+m3 <- lm(potassium~poly(arid.gradient,2), data=nutrient.mean)
+summary(m3)
 ```
 
 ### annual plant community repsonse
