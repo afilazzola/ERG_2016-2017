@@ -755,6 +755,12 @@ points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],mean.spp[mean.spp$M
 m1 <- lm(richness~arid.gradient*Microsite, data=mean.spp)
 summary(m1)
 
+m1 <- lm(richness~poly(arid.gradient,2), data=mean.spp)
+summary(m1)
+
+ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=richness, fill=Microsite, color=Microsite), size=3) + 
+ scale_color_manual(values=c("#E69F00","#56B4E9")) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=richness), color="black")+ ylab("Species richness") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
 ## abundance
 plot(mean.spp[mean.spp$Microsite=="open","arid.gradient"], mean.spp[mean.spp$Microsite=="open","abd"], ylab="average site abundance", xlab="aridity gradient")
 points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],mean.spp[mean.spp$Microsite=="shrub","abd"], pch=19) 
@@ -762,20 +768,28 @@ points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],mean.spp[mean.spp$M
 m2 <- lm(abd~arid.gradient*Microsite, data=mean.spp)
 summary(m2)
 
+m2 <- lm(ihs(abd)~arid.gradient, data=mean.spp)
+summary(m2)
+
+ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(abd), fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))  +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(abd)), color="black")+ ylab("Annual abundance") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+
+
 ## biomass
 plot(mean.spp[mean.spp$Microsite=="open","arid.gradient"], ihs(mean.spp[mean.spp$Microsite=="open","biomass"]), ylab="average site biomass", xlab="aridity gradient")
 points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],ihs(mean.spp[mean.spp$Microsite=="shrub","biomass"]), pch=19)
 
 m3 <- lm(ihs(biomass)~arid.gradient*Microsite, data=mean.spp)
 summary(m3)
-```
 
-### cleaned up community response to gradient
-```{r}
-
+ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(biomass), fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(biomass)), color="#56B4E9", data=subset(mean.spp, Microsite=="shrub"))  +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(biomass)), data=subset(mean.spp, Microsite=="open"), color="#E69F00")+ ylab("Annual biomass") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
 
 
 ```
+
+
 
 
 ### RDA community and environmental data
@@ -1015,7 +1029,7 @@ ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
 ```
 
 
-Difference in effect size
+### Difference in effect size
 
 ```{r warning=FALSE, fig.width=9}
 
@@ -1071,3 +1085,180 @@ legend(6.3,-0.55, c("2016","2017"), pch=22, pt.bg=c("Black","Grey50"), cex=1.6)
 ## add year column to precipitation data
 precip[,"Year"] <- ifelse(precip$season=="season.1","2016","2017")
 rii.precip <- merge(precip,rii.mean, by=c("Year","Gradient"))
+```
+
+
+### Native non-native comparisons
+```{r}
+
+## load species list
+spp.list <- read.csv("Data/ERG.specieslist.csv")
+
+## convert data to long format
+status <- gather(community, species, abundance, 13:53)
+names(spp.list)[1] <- "species" ## rename species column for merge
+
+## combine native-non-native status with data set
+status <- merge(status, spp.list, by="species")
+
+## summarize per plot native and non-natives, convert back to wide format
+mean.status <- status %>% group_by(Year, Site, Microsite, Rep, status) %>% summarize(abundance=sum(abundance))
+mean.status <- spread(mean.status, status, abundance)
+
+## calculate site means for native and non-native
+mean.status <- mean.status %>% group_by(Year, Site, Microsite) %>% summarize(native=mean(native), non.native=mean(non.native))
+
+## merge with original community data
+mean.spp <- merge(mean.spp, mean.status, by=c("Year","Site","Microsite"))
+
+## native
+m1 <- lm(ihs(native) ~ poly(arid.gradient,2), data=subset(mean.spp, Microsite=="shrub"))
+summary(m1)
+m1 <- lm(ihs(native) ~ arid.gradient, data=subset(mean.spp, Microsite=="open"))
+summary(m1)
+m1 <- lm(ihs(native) ~ poly(arid.gradient,2), data=mean.spp)
+summary(m1)
+
+
+ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(native), fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=ihs(native)), color="black")+ ylab("Native abundance") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+## non-native
+m1 <- lm(ihs(non.native) ~ poly(arid.gradient,2), data=subset(mean.spp, Microsite=="shrub"))
+summary(m1)
+m1 <- lm(ihs(non.native) ~ poly(arid.gradient,2), data=subset(mean.spp, Microsite=="open"))
+summary(m1)
+m1 <- lm(ihs(non.native) ~ poly(arid.gradient,2)*Microsite, data=mean.spp)
+summary(m1)
+
+
+ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(non.native), fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(non.native)), color="black")+ ylab("Non-native abundance") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+```
+
+### Phylogenetics
+```{r warning=FALSE, message=FALSE}
+
+library(picante)
+library(ape)
+library(brranching)
+library(taxize)
+
+## load species list to create tree
+spp.list <- read.csv("Data/ERG.specieslist.csv")
+
+## create a combined species name column and drop erinoginum because not to species level
+taxa <- paste(spp.list$Genus, spp.list$Species.name)
+taxa <- taxa[taxa!="Erinoginum spp"]
+
+## create tree of phylogeny
+tree <- phylomatic(taxa=taxa, get = 'POST')
+
+## calculate branch lengths using  Grafen's method
+## Grafen, A. (1989) The phylogenetic regression. Philosophical Transactions of the Royal society of London. Series B. Biological Sciences, 326, 119–157.
+tree2 <- compute.brlen(tree, method="Grafen")
+
+## view tree and outputs to verify branches
+plot(tree2)
+tree2
+
+## format community to only have site and microsite
+comm <- community %>% group_by(Site, Microsite) %>% summarise_if(is.numeric, funs(sum(., na.rm=T)))
+comm <- comm[,c(1:2,13:53)] ## extract species abundances only
+comm <- data.frame(comm) ## convert to dataframe
+comm[,"site.micro"] <- paste(comm$Site,comm$Microsite) ## create site by microsite column
+rownames(comm) <- comm[,length(comm)] ## replace row names with site by microsite
+comm[,c("Site","Microsite","Erinoginum.spp","Boraginaceae.sp.","site.micro")] <- NULL ## drop all columns but ones for analysis
+
+## match species name format
+spp.list[,"spp.name"] <- paste(spp.list$Genus, spp.list$Species.name)
+colnames(comm) <- spp.list$spp.name[match(colnames(comm), spp.list$Species.shorthand)]
+
+## match species format
+names(comm) <- gsub(" ", "_", names(comm), fixed=T) ## underscores instead of spaces
+names(comm) <- gsub("__", "_", names(comm), fixed=T) ## replace double underscores with one
+names(comm) <- tolower(names(comm)) ## lower case names
+
+
+## mean phylogenetic distance
+mpd.data <- mpd(comm, cophenetic(tree2), abundance.weighted=T)
+
+## format dataframe
+mpd.data <- data.frame(Microsite=c("open","shrub"),site=rownames(comm), mpd=mpd.data)
+mpd.data[,"Site"] <- gsub(" open", "", mpd.data[,"site"], ) 
+mpd.data[,"Site"] <- gsub(" shrub", "", mpd.data[,"Site"], ) 
+mpd.data[,"site"] <- NULL
+
+## getspecies richness for sites
+spp.rich <- community %>% group_by(Site, Microsite) %>% summarize(richness=mean(Richness))
+spp.rich <- data.frame(spp.rich)
+
+## join data
+mpd.rich <- merge(mpd.data, spp.rich, by=c("Site","Microsite"))
+
+mpd.arid <- merge(mpd.rich, mean.spp, by=c("Site","Microsite"))
+
+
+## phylogenetic distance
+
+m1 <- lm(mpd~arid.gradient*Microsite, data=mpd.arid)
+summary(m1)
+
+ggplot(mpd.arid) + geom_jitter(aes(x=arid.gradient, y=mpd, fill=Microsite, color=Microsite), size=3) + 
+ scale_color_manual(values=c("#E69F00","#56B4E9")) +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="shrub"), color="#56B4E9")+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="open"), color="#E69F00")+ ylab("Phylogenetic Community Dissimilarity") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+## repeat for year
+
+
+## format community to only have site and microsite
+comm <- community %>% group_by(Year, Site, Microsite) %>% summarise_if(is.numeric, funs(sum(., na.rm=T)))
+comm <- comm[,c(1:3,13:53)] ## extract species abundances only
+comm <- data.frame(comm) ## convert to dataframe
+comm[,"site.micro"] <- paste(comm$Site,comm$Microsite,as.character(comm$Year)) ## create site by microsite column
+rownames(comm) <- comm[,length(comm)] ## replace row names with site by microsite
+comm[,c("Year","Site","Microsite","Erinoginum.spp","Boraginaceae.sp.","site.micro")] <- NULL ## drop all columns but ones for analysis
+
+## match species name format
+spp.list[,"spp.name"] <- paste(spp.list$Genus, spp.list$Species.name)
+colnames(comm) <- spp.list$spp.name[match(colnames(comm), spp.list$Species.shorthand)]
+
+## match species format
+names(comm) <- gsub(" ", "_", names(comm), fixed=T) ## underscores instead of spaces
+names(comm) <- gsub("__", "_", names(comm), fixed=T) ## replace double underscores with one
+names(comm) <- tolower(names(comm)) ## lower case names
+
+
+## mean phylogenetic distance
+mpd.data <- mpd(comm, cophenetic(tree2), abundance.weighted=T)
+
+## format dataframe
+mpd.data <- data.frame(Year=c(rep(2016,14),rep(2017,14)),Microsite=c("open","shrub"),site=rownames(comm), mpd=mpd.data)
+mpd.data[,"Site"] <- gsub(" open", "", mpd.data[,"site"], ) 
+mpd.data[,"Site"] <- gsub(" shrub", "", mpd.data[,"Site"], ) 
+mpd.data[,"Site"] <- gsub(" 2016", "", mpd.data[,"Site"], ) 
+mpd.data[,"Site"] <- gsub(" 2017", "", mpd.data[,"Site"], ) 
+mpd.data[,"site"] <- NULL
+mpd.data[is.na(mpd.data)] <- 0 ## barstow no plants
+ 
+
+## getspecies richness for sites
+spp.rich <- community %>% group_by(Year, Site, Microsite) %>% summarize(richness=mean(Richness))
+spp.rich <- data.frame(spp.rich)
+
+## join data
+mpd.rich <- merge(mpd.data, spp.rich, by=c("Site","Microsite","Year"))
+
+mpd.arid <- merge(mpd.rich, mean.spp, by=c("Site","Microsite","Year"))
+
+
+## phylogenetic distance
+mpd.arid <- mpd.arid[c(2,4:nrow(mpd.arid)),] ## drop barstow
+
+m1 <- lm(mpd~arid.gradient*Microsite, data=mpd.arid)
+summary(m1)
+
+ggplot(mpd.arid) + geom_jitter(aes(x=arid.gradient, y=mpd, fill=Microsite, color=Microsite), size=3) + 
+ scale_color_manual(values=c("#E69F00","#56B4E9")) +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="shrub"), color="#56B4E9")+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="open"), color="#E69F00")+ ylab("Phylogenetic Community Dissimilarity") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+
+
