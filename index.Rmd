@@ -1163,54 +1163,6 @@ plot(tree2)
 tree2
 
 ## format community to only have site and microsite
-comm <- community %>% group_by(Site, Microsite) %>% summarise_if(is.numeric, funs(sum(., na.rm=T)))
-comm <- comm[,c(1:2,13:53)] ## extract species abundances only
-comm <- data.frame(comm) ## convert to dataframe
-comm[,"site.micro"] <- paste(comm$Site,comm$Microsite) ## create site by microsite column
-rownames(comm) <- comm[,length(comm)] ## replace row names with site by microsite
-comm[,c("Site","Microsite","Erinoginum.spp","Boraginaceae.sp.","site.micro")] <- NULL ## drop all columns but ones for analysis
-
-## match species name format
-spp.list[,"spp.name"] <- paste(spp.list$Genus, spp.list$Species.name)
-colnames(comm) <- spp.list$spp.name[match(colnames(comm), spp.list$Species.shorthand)]
-
-## match species format
-names(comm) <- gsub(" ", "_", names(comm), fixed=T) ## underscores instead of spaces
-names(comm) <- gsub("__", "_", names(comm), fixed=T) ## replace double underscores with one
-names(comm) <- tolower(names(comm)) ## lower case names
-
-
-## mean phylogenetic distance
-mpd.data <- mpd(comm, cophenetic(tree2), abundance.weighted=T)
-
-## format dataframe
-mpd.data <- data.frame(Microsite=c("open","shrub"),site=rownames(comm), mpd=mpd.data)
-mpd.data[,"Site"] <- gsub(" open", "", mpd.data[,"site"], ) 
-mpd.data[,"Site"] <- gsub(" shrub", "", mpd.data[,"Site"], ) 
-mpd.data[,"site"] <- NULL
-
-## getspecies richness for sites
-spp.rich <- community %>% group_by(Site, Microsite) %>% summarize(richness=mean(Richness))
-spp.rich <- data.frame(spp.rich)
-
-## join data
-mpd.rich <- merge(mpd.data, spp.rich, by=c("Site","Microsite"))
-
-mpd.arid <- merge(mpd.rich, mean.spp, by=c("Site","Microsite"))
-
-
-## phylogenetic distance
-
-m1 <- lm(mpd~arid.gradient*Microsite, data=mpd.arid)
-summary(m1)
-
-ggplot(mpd.arid) + geom_jitter(aes(x=arid.gradient, y=mpd, fill=Microsite, color=Microsite), size=3) + 
- scale_color_manual(values=c("#E69F00","#56B4E9")) +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="shrub"), color="#56B4E9")+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="open"), color="#E69F00")+ ylab("Phylogenetic Community Dissimilarity") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
-
-## repeat for year
-
-
-## format community to only have site and microsite
 comm <- community %>% group_by(Year, Site, Microsite) %>% summarise_if(is.numeric, funs(sum(., na.rm=T)))
 comm <- comm[,c(1:3,13:53)] ## extract species abundances only
 comm <- data.frame(comm) ## convert to dataframe
@@ -1233,10 +1185,10 @@ mpd.data <- mpd(comm, cophenetic(tree2), abundance.weighted=T)
 
 ## format dataframe
 mpd.data <- data.frame(Year=c(rep(2016,14),rep(2017,14)),Microsite=c("open","shrub"),site=rownames(comm), mpd=mpd.data)
-mpd.data[,"Site"] <- gsub(" open", "", mpd.data[,"site"], ) 
-mpd.data[,"Site"] <- gsub(" shrub", "", mpd.data[,"Site"], ) 
-mpd.data[,"Site"] <- gsub(" 2016", "", mpd.data[,"Site"], ) 
-mpd.data[,"Site"] <- gsub(" 2017", "", mpd.data[,"Site"], ) 
+mpd.data[,"Site"] <- gsub(" open", "", mpd.data[,"site"]) 
+mpd.data[,"Site"] <- gsub(" shrub", "", mpd.data[,"Site"]) 
+mpd.data[,"Site"] <- gsub(" 2016", "", mpd.data[,"Site"]) 
+mpd.data[,"Site"] <- gsub(" 2017", "", mpd.data[,"Site"]) 
 mpd.data[,"site"] <- NULL
 mpd.data[is.na(mpd.data)] <- 0 ## barstow no plants
  
@@ -1260,5 +1212,157 @@ summary(m1)
 ggplot(mpd.arid) + geom_jitter(aes(x=arid.gradient, y=mpd, fill=Microsite, color=Microsite), size=3) + 
  scale_color_manual(values=c("#E69F00","#56B4E9")) +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="shrub"), color="#56B4E9")+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="open"), color="#E69F00")+ ylab("Phylogenetic Community Dissimilarity") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
 
+```
+
+### Changes in Mechanisms along gradient
+```{r}
+
+### Nutrients 
+nutrient.mean <- nutrients.climate %>% group_by(Site, arid.gradient, microsite) %>% summarize(nitrogen=mean(N), phosphorus=mean(P), potassium=mean(K))
+nutrient.mean <- data.frame(nutrient.mean)
+
+## nitrogen
+m1 <- lm(nitrogen ~ arid.gradient * microsite, data=nutrient.mean)
+summary(m1)
+anova(m1)
+
+ggplot(nutrient.mean) + geom_jitter(aes(x=arid.gradient, y=nitrogen, fill=microsite, color=microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9")) +  
+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=nitrogen), color="#56B4E9", data=subset(nutrient.mean, microsite=="shrub")) +  
+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=nitrogen), color="#E69F00", data=subset(nutrient.mean, microsite=="open"))+ ylab("Nitrogen") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+## phosphorus
+m2 <- lm(phosphorus ~ arid.gradient * microsite, data=nutrient.mean)
+summary(m2)
+anova(m2)
+
+ggplot(nutrient.mean) + geom_jitter(aes(x=arid.gradient, y=phosphorus, fill=microsite, color=microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))  ## not significant
+
+m3 <- lm(potassium ~ arid.gradient * microsite, data=nutrient.mean)
+summary(m3)
+anova(m3)
+
+## potassium
+ggplot(nutrient.mean) + geom_jitter(aes(x=arid.gradient, y=potassium, fill=microsite, color=microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9")) +  
+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=potassium), color="black") 
+```
+#### Shrubs increase nitrogen availability at aridity extremes
+#### Shrubs do not effect potassium or phosphorus availability
+```{r}
+se <- function(x) sd(na.omit(x))/sqrt(length(na.omit(x)))
 
 
+smc <- census %>% group_by(Year, Site, Microsite, Census) %>% summarize(swc.avg=mean(swc), swc.se=se(swc))
+
+smc.arid <- merge(smc, site.climate, by=c("Site","Year"))
+
+
+## early swc
+smc.early <- subset(smc.arid, Census=="emergence")
+
+ggplot(smc.early)  + geom_jitter(aes(x=arid.gradient, y=swc.avg, fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  
+  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=swc.avg), color="black") + ylab("Percent soil Moisture Content (emergence)") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+m1 <- lm(swc.avg~ poly(arid.gradient,2) * Microsite, data=smc.early)
+summary(m1)
+
+## end swc
+smc.end <- subset(smc.arid, Census=="end")
+
+ggplot(smc.end)  + geom_jitter(aes(x=arid.gradient, y=swc.avg, fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  
+  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=swc.avg), color="black") + ylab("Percent soil Moisture Content (end)") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+m1 <- lm(swc.avg~ poly(arid.gradient,2) * Microsite, data=smc.end)
+summary(m1)
+
+```
+#### Shrubs do not alter soil moisture availability
+```{r}
+hobo.means <- HOBO.data %>% group_by(season, Microsite, Site) %>% summarize(temp.avg=mean(Temp),temp.var=var(Temp),temp.se=se(Temp),rh.avg=mean(RH, na.rm=T),rh.var=var(RH, na.rm=T),rh.se=se(RH),frost=(sum(na.omit(Temp)<0)/length(na.omit(Temp))*100),heat=(sum(na.omit(Temp)>30)/length(na.omit(Temp))*100))
+hobo.means[,"Year"] <- c(rep(2016,14),rep(2017,14))
+
+
+hobo.arid <- merge(hobo.means, site.climate, by=c("Site","Year"))
+
+## temperature
+ggplot(hobo.arid)  + geom_jitter(aes(x=arid.gradient, y=temp.avg, fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  
+  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=temp.avg), color="black") + ylab("Average Temperature (C°)") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+m1 <- lm(temp.avg~poly(arid.gradient,2) * Microsite, data=hobo.arid)
+summary(m1)
+anova(m1)
+
+
+## RH
+ggplot(hobo.arid)  + geom_jitter(aes(x=arid.gradient, y=rh.avg, fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  
+  stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=rh.avg), color="black") + ylab("Relative Humidity (%)") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+m2 <- lm(log(rh.avg)~arid.gradient * Microsite, data=hobo.arid)
+summary(m2)
+anova(m2)
+
+
+## frost
+hobo.arid2 <- subset(hobo.arid, Site!="Cuyama") ## drop cuyama because abnormal frost periods
+
+ggplot(hobo.arid2)  + geom_jitter(aes(x=arid.gradient, y=frost, fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  
+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=frost), color="black") + ylab("Number of frost days") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+m3 <- lm(frost~arid.gradient * Microsite, data=hobo.arid2)
+summary(m3)
+anova(m3)
+
+## temperature variability
+
+ggplot(hobo.arid)  + geom_jitter(aes(x=arid.gradient, y=temp.var.x, fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  
+  stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=temp.var.x), color="#E69F00", data=subset(hobo.arid, Microsite=="open")) + ylab("Number of frost days")+  
+  stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=temp.var.x), color="#56B4E9", data=subset(hobo.arid, Microsite=="shrub")) + ylab("temperature variation") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+m4 <- lm(log(temp.var.x)~arid.gradient * Microsite, data=hobo.arid)
+summary(m4)
+anova(m4)
+
+##  extreme heat
+## reverse inverse hyperbolic sine
+hs <- function(x) {
+    y <- 0.5*exp(-x)*(exp(2*x)-1)
+    return(y)
+}
+
+ggplot(hobo.arid)  + geom_jitter(aes(x=arid.gradient, y=heat, fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+  
+  stat_smooth(method="lm", formula= y~hs(x),aes(x=arid.gradient, y=heat), color="#E69F00", data=subset(hobo.arid, Microsite=="open")) +  
+  stat_smooth(method="lm", formula= y~hs(x),aes(x=arid.gradient, y=heat), color="#56B4E9", data=subset(hobo.arid, Microsite=="shrub")) + ylab("extreme heat days variation") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+m5 <- lm(ihs(heat)~arid.gradient * Microsite, data=hobo.arid)
+summary(m5)
+anova(m5)
+```
+
+#### shrubs  reduce temperature variability
+```{r}
+shrubz <- read.csv("Data/ERG.shrub.csv")
+
+shrub.mean <- shrubz %>% group_by(Site, Microsite) %>% summarize(compact=mean(Compaction))
+
+shrub.clim <- merge(shrub.mean, site.climate, by=c("Site"))
+#shrub.clim <- subset(shrub.clim, Year==2016)
+
+ggplot(shrub.clim)  + geom_jitter(aes(x=arid.gradient, y=compact, fill=Microsite, color=Microsite), size=3)+ 
+ scale_color_manual(values=c("#E69F00","#56B4E9"))+   stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=compact), color="#E69F00", data=subset(shrub.clim, Microsite=="open"))+
+  stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=compact), color="#56B4E9", data=subset(shrub.clim, Microsite=="shrub")) + ylab("extreme heat days variation") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+
+m1 <- lm(log(compact) ~ arid.gradient* Microsite, data=shrub.clim)
+summary(m1)
+anova(m1)
+```
+
+#### shrubs reduce soil compaction and increase substrate penetration
