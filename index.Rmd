@@ -44,6 +44,7 @@ library(ggplot2)
 library(tidyverse)
 library(ggthemes)
 library(usdm)
+library(broom)
 ```
 
 
@@ -1358,7 +1359,7 @@ shrub.clim <- merge(shrub.mean, site.climate, by=c("Site"))
 
 ggplot(shrub.clim)  + geom_jitter(aes(x=arid.gradient, y=compact, fill=Microsite, color=Microsite), size=3)+ 
  scale_color_manual(values=c("#E69F00","#56B4E9"))+   stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=compact), color="#E69F00", data=subset(shrub.clim, Microsite=="open"))+
-  stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=compact), color="#56B4E9", data=subset(shrub.clim, Microsite=="shrub")) + ylab("extreme heat days variation") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+  stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=compact), color="#56B4E9", data=subset(shrub.clim, Microsite=="shrub")) + ylab("soil compaction") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
 
 m1 <- lm(log(compact) ~ arid.gradient* Microsite, data=shrub.clim)
 summary(m1)
@@ -1366,3 +1367,34 @@ anova(m1)
 ```
 
 #### shrubs reduce soil compaction and increase substrate penetration
+
+
+### Phytometer models
+```{r}
+
+census.arid <- merge(census.end, site.climate, by=c("Year","Site"))
+
+
+## all species end of season
+m1 <- glm.nb(phyto.abd~ Microsite * Nutrient * arid.gradient, data=census.arid)
+anova(m2, test="Chisq") ## Site and microsite*nutrient significant
+
+
+## run full model for phacelia biomass
+m1 <- aov(log(Phacelia.biomass)~ Microsite * Nutrient * arid.gradient,  data=subset(census.arid, Phacelia.biomass>0))
+summary(m1) ## site and microsite
+TukeyHSD(m1, "Microsite")
+TukeyHSD(m1, "Nutrient")
+
+
+## run full model for plantago biomass
+m2 <- aov(log(Plantago.biomass)~ Microsite * Nutrient * arid.gradient,  data=subset(census.arid, Plantago.biomass>0))
+summary(m2) ## site and year + sitexmicrosite
+TukeyHSD(m2, "Microsite")
+TukeyHSD(m2, "Nutrient")
+
+
+## run full model for salvia biomass
+m3 <- aov(log(Salvia.biomass)~ Microsite * Nutrient * arid.gradient,  data=subset(census.arid, Salvia.biomass>0))
+summary(m3) ## site and year + sitexmicrosite
+TukeyHSD(m3, "Microsite")
