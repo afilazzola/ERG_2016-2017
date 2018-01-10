@@ -1371,6 +1371,8 @@ anova(m1)
 
 ### Phytometer models
 ```{r}
+library(lsmeans)
+
 
 census.arid <- merge(census.end, site.climate, by=c("Year","Site"))
 
@@ -1398,3 +1400,25 @@ TukeyHSD(m2, "Nutrient")
 m3 <- aov(log(Salvia.biomass)~ Microsite * Nutrient * arid.gradient,  data=subset(census.arid, Salvia.biomass>0))
 summary(m3) ## site and year + sitexmicrosite
 TukeyHSD(m3, "Microsite")
+
+
+## abundance
+## run full model for phacelia abundance
+m1 <- glm.nb(Phacelia~ Microsite * Nutrient * arid.gradient,  data=census.arid)
+summary(m1) ## site and microsite
+anova(m1, test="Chisq")
+lsmeans(m1, pairwise~"Microsite")
+
+
+## run full model for plantago biomass
+m2 <- glm.nb(Plantago~ Microsite * Nutrient * arid.gradient,  data=census.arid)
+summary(m2) ## site and microsite
+anova(m2, test="Chisq")
+lsmeans(m2, pairwise~"Microsite")
+
+
+## run full model for salvia biomass
+m3 <- glm.nb(Salvia~ Microsite * Nutrient * arid.gradient,  data=census.arid)
+summary(m3) ## site and microsite
+anova(m3, test="Chisq")
+lsmeans(m3, pairwise~Microsite*Nutrient)
