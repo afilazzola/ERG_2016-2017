@@ -1422,3 +1422,31 @@ m3 <- glm.nb(Salvia~ Microsite * Nutrient * arid.gradient,  data=census.arid)
 summary(m3) ## site and microsite
 anova(m3, test="Chisq")
 lsmeans(m3, pairwise~Microsite*Nutrient)
+
+
+## treatment plots
+census.long <- gather(census.arid, species, biomass, 12:14)
+census.long[,"species"] <- as.factor(census.long$species)
+
+## microsite average
+census.micro <- census.long %>% filter(biomass>0) %>%  group_by(Microsite, species) %>%  summarize(Biomass=mean(biomass), error=se(biomass))
+
+ggplot(census.micro, aes(x=species, y=Biomass, fill=Microsite)) +   geom_bar(position=position_dodge(), stat="identity", colour="black") + scale_fill_brewer()+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+ theme_Publication()
+
+## nutrient average
+census.nut <- census.long %>% filter(biomass>0) %>%  group_by(Nutrient, species) %>%  summarize(Biomass=mean(biomass), error=se(biomass))
+
+ggplot(census.nut, aes(x=species, y=Biomass, fill=Nutrient)) +   geom_bar(position=position_dodge(), stat="identity",colour="black") + scale_fill_brewer()+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
+                  width=.2,                    # Width of the error bars
+                  position=position_dodge(.9))+ theme_Publication()
+
+## aridity average
+
+ggplot(census.long, aes(x=arid.gradient, y=biomass, fill=species, colour=species)) + theme_Publication()+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#E69F00",fill="#E69F0040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#56B4E9", fill="#56B4E940", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
+
+
+m1 <- lm(log(biomass)~arid.gradient, data=subset(census.long, species=="Phacelia.biomass" & biomass >0))
+m2 <- lm(log(biomass)~arid.gradient, data=subset(census.long, species=="Plantago.biomass" & biomass>0))
+m3 <- lm(log(biomass)~arid.gradient, data=subset(census.long, species=="Salvia.biomass" & biomass>0))

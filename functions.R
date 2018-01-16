@@ -14,7 +14,7 @@ theme_Publication <- function(base_size=14, base_family="helvetica") {
             axis.text = element_text(), 
             axis.line = element_line(colour="black"),
             axis.ticks = element_line(),
-            panel.grid.major = element_line(colour="#f0f0f0"),
+            panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
             legend.key = element_rect(colour = NA),
             legend.position = "bottom",
