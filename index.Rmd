@@ -1450,3 +1450,128 @@ ggplot(census.long, aes(x=arid.gradient, y=biomass, fill=species, colour=species
 m1 <- lm(log(biomass)~arid.gradient, data=subset(census.long, species=="Phacelia.biomass" & biomass >0))
 m2 <- lm(log(biomass)~arid.gradient, data=subset(census.long, species=="Plantago.biomass" & biomass>0))
 m3 <- lm(log(biomass)~arid.gradient, data=subset(census.long, species=="Salvia.biomass" & biomass>0))
+```
+
+### Community analysis
+```{r warning=FALSE, message=FALSE}
+
+## Regressions To Separate Phylogenetic Attraction And Repulsion
+
+## sppregs(community[,13:53], )
+
+### Network analysis
+library(igraph)
+library(statnet)
+
+
+## reload native vs non-native species
+status <- read.csv("Data//ERG.specieslist.csv")
+
+shrub.comm <- subset(community, Microsite=="shrub", select=13:53)
+shrub.comm <- shrub.comm[,colSums(shrub.comm)!=0]
+open.comm <- subset(community, Microsite=="open", select=13:53)
+open.comm <- open.comm[,colSums(open.comm)!=0]
+
+## Shrub
+## correlation species network
+network <- data.frame(cor(shrub.comm))
+
+network[,"To"] <- colnames(network)
+
+test <- gather(network, From, correlation, 1:(ncol(network)-1))
+test <- subset(test, correlation>0.10 & correlation != 1 | correlation < -0.10 )
+
+n.shrub <- graph_from_data_frame(test[,1:2], directed=TRUE)
+
+## plot network circle
+lo <- layout_in_circle(n.shrub)
+plot(n.shrub, layout=lo)
+transitivity(n.shrub, type = "local") 
+transitivity(n.shrub, type = "global") 
+
+
+## colour graphs
+shapes <- V(n.shrub)$name %in% (subset(status, status=="non.native", select=1))[,1] +1
+plot(n.shrub, layout=layout_on_grid(n.shrub),vertex.shape=c("circle", "square")[shapes],  vertex.color=c("tomato2", "royalblue")[shapes])
+
+## open
+## correlation species network
+network <- data.frame(cor(open.comm))
+
+network[,"To"] <- colnames(network)
+
+test <- gather(network, From, correlation, 1:(ncol(network)-1))
+test <- subset(test, correlation>0.10 & correlation != 1 | correlation < -0.10 )
+
+n.open <- graph_from_data_frame(test[,1:2], directed=TRUE)
+
+## plot network circle
+lo <- layout_in_circle(n.open)
+plot(n.open, layout=lo)
+
+## colour graphs
+shapes <- V(n.open)$name %in% (subset(status, status=="non.native", select=1))[,1] +1
+plot(n.open, layout=layout_on_grid(n.open),vertex.shape=c("circle", "square")[shapes],  vertex.color=c("tomato2", "royalblue")[shapes])
+
+## statistics
+transitivity(n.open, type = "local") 
+transitivity(n.open, type = "global") 
+
+
+
+### indicator species analysis
+library(indicspecies)
+
+## indicator species analysis
+indval <- multipatt(community[,13:53], community$Microsite, control=how(nperm=999))
+summary(indval)
+
+
+## species accumilation curves
+accum1 <- specaccum(subset(community, Microsite=="shrub", select=13:53), method="random",  permutations=1000)
+accum2 <- specaccum(subset(community, Microsite=="open", select=13:53), method="random",  permutations=1000)
+
+
+plot(accum2,  ci.col="Grey20", xlab="Sampling effort", cex.axis=1.5, cex.lab=1.8, ylab="Species richness")
+plot(accum1,add=T , col="Grey50",   ci.col="Grey60")
+
+```
+
+### cluster analysis
+
+```{r warning=FALSE, message=FALSE}
+library("cluster")
+library("factoextra")
+library("magrittr")
+
+comm.sum <- community %>%  group_by(Microsite, Site) %>% summarize_if(is.numeric, funs(sum))
+comm.sum <- data.frame(comm.sum)
+rownames(comm.sum) <- paste(comm.sum$Microsite,comm.sum$Site)
+
+## coreelation matrix
+
+### Distance measures
+res.dist <- get_dist(comm.sum[,13:53], stand = TRUE, method = "euclidean")
+fviz_dist(res.dist,    gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+
+## dendrogram
+
+dis <- vegdist(comm.sum[,13:53], method="bray")
+clus <- hclust(dis, "ward.D2")
+
+
+fviz_dend(clus, k = 3, # Cut in four groups
+          cex = 0.5, # label size
+          k_colors = c("#2E9FDF", "#00AFBB", "#E7B800"),
+          color_labels_by_k = TRUE, # color labels by groups
+          rect = TRUE # Add rectangle around groups
+          )
+
+## mantel test?
+
+
+##Bray-Curtis distance
+
+library(ecodist)
+
+mantel(dist(comm.sum[1:7,13:53])~dist(comm.sum[8:14,13:53]))
