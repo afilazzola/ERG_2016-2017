@@ -1117,7 +1117,7 @@ m1 <- lm(ihs(native) ~ poly(arid.gradient,2), data=subset(mean.spp, Microsite=="
 summary(m1)
 m1 <- lm(ihs(native) ~ arid.gradient, data=subset(mean.spp, Microsite=="open"))
 summary(m1)
-m1 <- lm(ihs(native) ~ poly(arid.gradient,2), data=mean.spp)
+m1 <- lm(ihs(native) ~ poly(arid.gradient,2)*Microsite, data=mean.spp)
 summary(m1)
 
 
@@ -1131,7 +1131,8 @@ m1 <- lm(ihs(non.native) ~ poly(arid.gradient,2), data=subset(mean.spp, Microsit
 summary(m1)
 m1 <- lm(ihs(non.native) ~ poly(arid.gradient,2)*Microsite, data=mean.spp)
 summary(m1)
-
+m1 <- lm(ihs(non.native) ~ arid.gradient*Microsite, data=mean.spp)
+summary(m1)
 
 ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(non.native), fill=Microsite, color=Microsite), size=3)+ 
  scale_color_manual(values=c("#E69F00","#56B4E9"))+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(non.native)), color="black")+ ylab("Non-native abundance") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
@@ -1213,6 +1214,14 @@ summary(m1)
 ggplot(mpd.arid) + geom_jitter(aes(x=arid.gradient, y=mpd, fill=Microsite, color=Microsite), size=3) + 
  scale_color_manual(values=c("#E69F00","#56B4E9")) +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="shrub"), color="#56B4E9")+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="open"), color="#E69F00")+ ylab("Phylogenetic Community Dissimilarity") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
 
+
+
+m1 <- lm(mpd~arid.gradient, data=subset(mpd.arid, Microsite=="shrub"))
+summary(m1)
+
+
+m2 <- lm(mpd~arid.gradient, data=subset(mpd.arid, Microsite=="open"))
+summary(m2)
 ```
 
 ### Changes in Mechanisms along gradient
@@ -1223,7 +1232,7 @@ nutrient.mean <- nutrients.climate %>% group_by(Site, arid.gradient, microsite) 
 nutrient.mean <- data.frame(nutrient.mean)
 
 ## nitrogen
-m1 <- lm(nitrogen ~ arid.gradient * microsite, data=nutrient.mean)
+m1 <- lm(nitrogen ~ arid.gradient, data=subset(nutrient.mean, microsite=="open"))
 summary(m1)
 anova(m1)
 
@@ -1294,9 +1303,12 @@ ggplot(hobo.arid)  + geom_jitter(aes(x=arid.gradient, y=temp.avg, fill=Microsite
  scale_color_manual(values=c("#E69F00","#56B4E9"))+  
   stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=temp.avg), color="black") + ylab("Average Temperature (C°)") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
 
-m1 <- lm(temp.avg~poly(arid.gradient,2) * Microsite, data=hobo.arid)
+m1 <- lm(temp.avg~arid.gradient * Microsite, data=hobo.arid)
 summary(m1)
 anova(m1)
+
+m1.s <- lm(temp.avg~arid.gradient, data=subset(hobo.arid, Microsite=="shrub"))
+summary(m1.s)
 
 
 ## RH
@@ -1401,6 +1413,8 @@ m3 <- aov(log(Salvia.biomass)~ Microsite * Nutrient * arid.gradient,  data=subse
 summary(m3) ## site and year + sitexmicrosite
 TukeyHSD(m3, "Microsite")
 
+m3.n <- lm(log(Salvia.biomass)~ arid.gradient,  data=subset(census.arid, Salvia.biomass>0 & Nutrient =="Added"))
+m3.a <- lm(log(Salvia.biomass)~ arid.gradient,  data=subset(census.arid, Salvia.biomass>0 & Nutrient =="Ambient"))
 
 ## abundance
 ## run full model for phacelia abundance
@@ -1556,22 +1570,150 @@ fviz_dist(res.dist,    gradient = list(low = "#00AFBB", mid = "white", high = "#
 
 ## dendrogram
 
-dis <- vegdist(comm.sum[,13:53], method="bray")
+## transform data
+comm.trans <- decostand(comm.sum[,13:53], "hell")
+
+## clean data for ordination
+## see distribution of spp
+boxplot(comm.trans, xaxt="n")
+labs <- colnames(comm.trans)
+text(cex=0.8, x=1:41-1, y=-0.12, labs, xpd=TRUE, srt=45)
+
+## remove spp with only one instancve
+comm.trans <- comm.trans[,!colSums(comm.trans)==apply(comm.trans, 2, max)]
+
+
+## replace outliers with mean
+avg.max <- function(x) {
+  y =  max(x)
+  avg = mean(x)
+  x[x==y] <- avg
+  return(x)
+}
+  
+## dot chart to find outliers (remove or Avg)
+#dotchart(comm.trans$E.cicutarium) ## Erodium
+comm.trans[,"E.cicutarium"] <- avg.max(comm.trans$E.cicutarium) ## removed outlier
+#dotchart(comm.trans$A.wrangelianus) ## Chilean trefoil
+comm.trans[,"A.wrangelianus"] <- NULL ## removed entire species
+#dotchart(comm.trans$A.lentiginosus) ##
+comm.trans[,"A.lentiginosus"] <- avg.max(comm.trans$A.lentiginosus) ## removed outlier
+#dotchart(comm.trans$H.vulgare) ## Hordeum
+comm.trans[,"H.vulgare"] <- NULL ## removed entire species
+#dotchart(comm.trans$Pectocarya.spp) ## 
+comm.trans[,"Pectocarya.spp"] <- avg.max(comm.trans$Pectocarya.spp) ## removed outlier
+#dotchart(comm.trans$L.arizonicus) ## Lupin 
+comm.trans[,"L.arizonicus"] <- NULL ## removed entire species
+#dotchart(comm.trans$M.bellioides) ##
+comm.trans[,"M.bellioides"] <- NULL ## removed entire species
+#dotchart(comm.trans$B.nigra) ## Mustard
+comm.trans[,"B.nigra"] <- NULL ## removed entire species
+#dotchart(comm.trans$N.demissum) ## Sand Matt
+comm.trans[,"N.demissum"] <- avg.max(comm.trans$N.demissum) ## removed outlier
+#dotchart(comm.trans$L.gracilis) ## 
+comm.trans[,"L.gracilis"] <- avg.max(comm.trans$L.gracilis) ## removed outlier
+#dotchart(comm.trans$A.grandiflora) ##  Amsinckia
+comm.trans[,"A.grandiflora"] <- NULL ## removed entire species
+#dotchart(comm.trans$B.diandrus) ##  Bromus diandrus
+comm.trans[,"B.diandrus"] <- NULL ## removed entire species
+#dotchart(comm.trans$M.affinis) ##  
+comm.trans[,"M.affinis"] <- NULL ## removed entire species
+#dotchart(comm.trans$P.crenulata) ##  
+comm.trans[,"P.crenulata"] <- NULL ## removed entire species
+#dotchart(comm.trans$Erinoginum.spp) # buckwheat
+comm.trans[,"Erinoginum.spp"] <- avg.max(comm.trans$Erinoginum.spp) ## removed outlier
+#dotchart(comm.trans$C.lasiophyllus) # 
+comm.trans[,"C.lasiophyllus"] <- NULL ## removed entire species
+
+
+
+library(usdm)
+library(corrplot)
+
+## Check for collinearity
+vifcor(comm.trans)
+
+## drop Claviformis because of collinear problems in P.insularis
+comm.trans[,"C.claviformis"] <- NULL ## removed entire species
+comm.trans[,"L.decorus"] <- NULL ## removed entire species
+comm.trans[,"E.glyptosperma"] <- NULL ## removed entire species
+comm.trans[,"E.wallacei"] <- NULL ## removed entire species
+
+cor.dat <- cor(comm.trans[,1:20])
+corrplot(cor.dat, method="number")
+
+
+## calculate distances
+dis <- vegdist(comm.trans, method="bray")
+
+
+## cluster analysis
 clus <- hclust(dis, "ward.D2")
 
+## cluster colours
+colz <- c("#3e4444", "#86af49", "#405d27","#c1946a")
 
-fviz_dend(clus, k = 3, # Cut in four groups
+fviz_dend(clus, k = 4, # Cut in four groups
           cex = 0.5, # label size
-          k_colors = c("#2E9FDF", "#00AFBB", "#E7B800"),
+          k_colors = colz,
           color_labels_by_k = TRUE, # color labels by groups
           rect = TRUE # Add rectangle around groups
           )
 
-## mantel test?
+grp <- cutree(clus, 4)
+
+## Interpretation of classes
+
+## get soil moisture from site/microsite
+smc.avg <- smc.end %>% group_by(Site, Microsite) %>% summarize(mean.smc=mean(swc.avg, na.rm=T))
+smc.avg <- data.frame(smc.avg)
+smc.avg[,"grp"] <- as.factor(c(3,3,2,1,4,4,1,1,4,4,3,3,2,2))
+
+boxplot(mean.smc ~ grp, data=smc.avg)
+
+## conduct ordination
+ord <- rda(comm.trans)
+(R2adj <- RsquareAdj(rda1)$adj.r.squared) ## 50.4% of variation explained
+
+## calculate priority
+spp.priority <- colSums(comm.trans)
+
+## plot ordination
+par(mar=c(4.5,4.5,0.5,0.5))
+plot(ord, type="n")
+ordiellipse(ord, grp, lty = 2, col = colz, draw="polygon", alpha=150)
+orditorp(ord, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=0.5)
+orditorp(ord, display = "sites", cex = 0.7, col = "black")
+
+##collect environmental variables for site
+nutrients <- read.csv("Data/ERG.soilnutrients.csv")
+nutrients.mean <- nutrients %>% group_by(microsite, Site) %>% summarise_all(funs(mean))
+nutrients.vars <- data.frame(nutrients.mean)
 
 
-##Bray-Curtis distance
+## summarize daily means across sites
+means <- HOBO.data %>% group_by(Microsite, Site) %>% summarize(Temp.=mean(Temp, na.rm=T),rh=mean(RH, na.rm=T),temp.se=se(Temp),rh.se=se(RH))
+means <- data.frame(means)
 
-library(ecodist)
+## soil moisture
+smc.avg <- smc.early %>% group_by(Microsite, Site) %>% summarize(SMC=mean(swc.avg, na.rm=T))
 
-mantel(dist(comm.sum[1:7,13:53])~dist(comm.sum[8:14,13:53]))
+envs <- data.frame(swc=smc.avg[,"SMC"],nutrients.vars[,c("N","P","K")], means[,c("Temp.","rh")])
+
+## Check for collinearity
+cor(envs)
+envs[,"K"] <- NULL ## drop potassium for being correlated
+envs[,"rh"] <- NULL ## drop humidity for being correlated
+
+ord.env <- envfit(ord, envs)
+plot(ord.env)
+
+# ordicluster(ord, clus, col="blue")
+
+```
+
+### Basic community data
+```{r}
+community
+
+aggregate(Richness~1, FUN=mean, data=community)
