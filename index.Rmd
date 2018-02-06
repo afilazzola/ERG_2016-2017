@@ -1712,8 +1712,21 @@ plot(ord.env)
 
 ```
 
-### Basic community data
+### Mixed model resuilts
 ```{r}
-community
 
-aggregate(Richness~1, FUN=mean, data=community)
+community.arid <- merge(community, site.climate, by=c("Year","Site"))
+
+library(lmerTest)
+
+m1 <- glmer(Abundance~Microsite * arid.gradient + (1|Year), family="poisson", data=community.arid)
+
+
+mean.year <- community.arid %>% group_by(Microsite, arid.gradient, Year) %>%  summarize(abd=mean(Abundance),rich=mean(Richness), bio=mean(Biomass))
+
+
+
+ggplot(mean.year, aes(x=arid.gradient, y=bio, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ facet_grid(~Year)
+
+stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#E69F00",fill="#E69F0040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#56B4E9", fill="#56B4E940", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
+
