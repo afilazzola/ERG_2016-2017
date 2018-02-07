@@ -1715,6 +1715,11 @@ plot(ord.env)
 
 ```
 
+### Short-term vs long-term effects
+```{r}
+[Repeated of analyses separating long- and short- term effets](../longshort.effects.html)
+```
+
 ### Mixed model resuilts
 ```{r}
 
@@ -1727,9 +1732,20 @@ m1 <- glmer(Abundance~Microsite * arid.gradient + (1|Year), family="poisson", da
 
 mean.year <- community.arid %>% group_by(Microsite, arid.gradient, Year) %>%  summarize(abd=mean(Abundance),rich=mean(Richness), bio=mean(Biomass))
 
+m1 <- lmer(ihs(bio)~Microsite * arid.gradient + (1|Year), data=mean.year)
+shapiro.test(resid(m1))
+anova(m1)
+
+m2 <- lmer(ihs(abd)~Microsite * arid.gradient + (1|Year), data=mean.year)
+shapiro.test(resid(m2))
+anova(m2)
+
+m3 <- lmer(ihs(rich)~Microsite * arid.gradient + (1|Year), data=mean.year)
+shapiro.test(resid(m3))
+anova(m3)
 
 
-ggplot(mean.year, aes(x=arid.gradient, y=bio, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ facet_grid(~Year)
+ggplot(mean.year, aes(x=arid.gradient, y=bio, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()
 
 stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#E69F00",fill="#E69F0040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#56B4E9", fill="#56B4E940", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
 

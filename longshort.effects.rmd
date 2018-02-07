@@ -1,0 +1,122 @@
+### load libraries
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+library(tidyverse)
+source("functions.r")
+library(ggthemes)
+
+ihs <- function(x) {
+    y <- log(x + sqrt(x ^ 2 + 1))
+    return(y)
+}
+se <- function(x, ...) sd(x)/sqrt(length(x)) ## standard error
+
+```
+
+### load plant data
+```{r echo=FALSE,  warning=FALSE, message=FALSE}
+
+comm <- read.csv("Data//ERG.communitydata.csv")
+comm[is.na(comm)] <- 0
+
+mean.year <- comm  %>% group_by(Microsite, Site, Year) %>%  summarize(abd=mean(Abundance, na.rm=T),rich=mean(Richness), bio=mean(Biomass, na.rm=T))
+
+
+```
+
+
+## long term effects
+```{r,  warning=FALSE, message=FALSE}
+
+arid.vals <- read.csv("Data/aridity.PET.csv")
+colnames(arid.vals)[1] <- "Site"
+
+mean.val <- comm  %>% group_by(Microsite, Site) %>%  summarize(abd=mean(Abundance, na.rm=T),rich=mean(Richness), bio=mean(Biomass, na.rm=T))
+
+mean.val  <- merge(mean.val, arid.vals, by="Site")
+
+nutrients <- read.csv("Data//ERG.soilnutrients.csv")
+
+## biomass
+ggplot(mean.val, aes(x=log(Gradient), y=ihs(bio), fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point() + ylab("Biomass") + xlab("aridity")
+
+## abundance
+ggplot(mean.val, aes(x=log(Gradient), y=ihs(abd), fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("abundance") + xlab("aridity")
+
+## richness
+ggplot(mean.val, aes(x=log(Gradient), y=ihs(rich), fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("richness") + xlab("aridity")
+
+nut.mean <- nutrients  %>% group_by(microsite, Site) %>%  summarize(n=mean(N), p=mean(P), k=mean(K))
+nut.mean <- merge(nut.mean, arid.vals, by="Site")
+
+## Nitrogen
+ggplot(nut.mean, aes(x=log(Gradient), y=n, fill=microsite, colour=microsite)) + theme_Publication()+ geom_point()+ ylab("nitrogen") + xlab("aridity")
+
+## Potassium
+ggplot(nut.mean, aes(x=log(Gradient), y=k, fill=microsite, colour=microsite)) + theme_Publication()+ geom_point()+ ylab("potassium") + xlab("aridity")
+
+census <- read.csv("Data/ERG.phytometer.census.csv")
+
+swc.mean <- census  %>% group_by(Microsite, Site) %>%  summarize(smc=mean(swc))
+swc.mean  <- merge(swc.mean , arid.vals, by="Site")
+
+## Soil moisture
+ggplot(swc.mean, aes(x=log(Gradient), y=smc, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("Soil moisture") + xlab("aridity")
+
+HOBO.data <- read.csv("Data/ERG.logger.data.csv")
+## add season column
+HOBO.data[,"season"] <- ifelse(HOBO.data$Year==2016 & HOBO.data$Month < 5 | HOBO.data$Year==2015, "season1","season2")
+
+hobo.means <- HOBO.data %>% group_by(Microsite, Site) %>% summarize(temp.avg=mean(Temp),temp.var=var(Temp),temp.se=se(Temp),rh.avg=mean(RH, na.rm=T),rh.var=var(RH, na.rm=T),rh.se=se(RH),frost=(sum(na.omit(Temp)<0)/length(na.omit(Temp))*100),heat=(sum(na.omit(Temp)>30)/length(na.omit(Temp))*100))
+hobo.means <- merge(hobo.means , arid.vals, by="Site")
+
+## temperature
+ggplot(hobo.means, aes(x=log(Gradient), y=temp.var, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("Temperature variation") + xlab("aridity")
+
+## relative humidity
+ggplot(hobo.means, aes(x=log(Gradient), y=rh.avg, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("RH %") + xlab("aridity")
+
+```
+
+## short-term effects
+```{r,  warning=FALSE, message=FALSE}
+
+climate <- read.csv("Data//ERG.climatedata.csv")
+season1 <- subset(climate, year==2015 & month > 10 | year==2016 & month < 5)
+season2 <- subset(climate, year==2016 & month > 10 | year==2017 & month < 5)
+climate <- rbind(season1,season2)
+climate[,"season"] <- c(rep("season.1",nrow(season1)),rep("season.2",nrow(season2)))
+climate <- na.omit(climate)
+
+climate.mean <- climate %>% group_by(Site, season) %>% summarize(temp=mean(avg.temp),precip=sum(Precip)) %>% mutate(Gradient=(precip/(temp+10)))
+climate.mean[,"Year"] <- ifelse(climate.mean$season=="season.1", "2016","2017")
+
+mean.val <- comm  %>% group_by(Microsite, Site, Year) %>%  summarize(abd=mean(Abundance, na.rm=T),rich=mean(Richness), bio=mean(Biomass, na.rm=T))
+
+mean.val  <- merge(mean.val, climate.mean, by=c("Site","Year"))
+
+## biomass
+ggplot(mean.val, aes(x=log(Gradient), y=ihs(bio), fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point() + ylab("Biomass") + xlab("aridity")
+
+## abundance
+ggplot(mean.val, aes(x=log(Gradient), y=ihs(abd), fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("abundance") + xlab("aridity")
+
+## richness
+ggplot(mean.val, aes(x=log(Gradient), y=ihs(rich), fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("richness") + xlab("aridity")
+
+
+swc.mean <- census  %>% group_by(Microsite, Site, Year) %>%  summarize(smc=mean(swc))
+swc.mean  <- merge(swc.mean , climate.mean, by=c("Site","Year"))
+
+## Soil moisture
+ggplot(swc.mean, aes(x=log(Gradient), y=smc, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("Soil moisture") + xlab("aridity")
+
+
+hobo.means <- HOBO.data %>% group_by(Microsite, Site, season) %>% summarize(temp.avg=mean(Temp),temp.var=var(Temp),temp.se=se(Temp),rh.avg=mean(RH, na.rm=T),rh.var=var(RH, na.rm=T),rh.se=se(RH),frost=(sum(na.omit(Temp)<0)/length(na.omit(Temp))*100),heat=(sum(na.omit(Temp)>30)/length(na.omit(Temp))*100))
+hobo.means[,"Year"] <- ifelse(hobo.means$season=="season1","2016","2017")
+hobo.means <- merge(hobo.means , climate.mean, by=c("Site","Year"))
+
+## temperature
+ggplot(hobo.means, aes(x=log(Gradient), y=temp.var, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("Temperature variation") + xlab("aridity")
+
+## relative humidity
+ggplot(hobo.means, aes(x=log(Gradient), y=rh.avg, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()+ ylab("RH %") + xlab("aridity")
