@@ -1680,6 +1680,8 @@ dca1 <- decorana(comm.trans) ## length of gradient >2 & determine relative diffe
 
 ## conduct ordination
 ord <- cca(comm.trans)
+summary(ord)
+
 
 ## calculate priority
 spp.priority <- colSums(comm.trans)
@@ -1740,6 +1742,10 @@ plot(ord.env)
 [Repeated of analyses separating long- and short- term effects](longshort.effects.html)
 
 
+### Ordination including aridity and microsite (pCCA)
+
+[Partial Constrained Correspondence Analysis for community data](cca.analysis.html)
+
 ### Mixed model resuilts
 ```{r warning=FALSE, message=FALSE}
 
@@ -1772,16 +1778,16 @@ anova(m3)
 r.squaredGLMM(m3) ## R squared values 
 
 ### Biomass
-p1 <- ggplot(mean.year) + geom_jitter(aes(x=arid.gradient, y=ihs(bio)), color="#56B4E9", size=3, data=subset(mean.year, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=ihs(bio)), color="#E69F00", size=3, data=subset(mean.year, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,3),aes(x=arid.gradient, y=ihs(bio)), color="#E69F00", fill="#E69F0080", data=subset(mean.year, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,3),aes(x=arid.gradient, y=ihs(bio)), color="#56B4E9", fill="#56B4E970", data=subset(mean.year, Microsite=="shrub"), lwd=1.4)  + ylab("Annnual plant biomass")+ xlab("")
+p1 <- ggplot(mean.year) + geom_jitter(aes(x=arid.gradient, y=ihs(bio)), color="#56B4E9", size=3, data=subset(mean.year, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=ihs(bio)), color="#E69F00", size=3, data=subset(mean.year, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,3),aes(x=arid.gradient, y=ihs(bio)), color="#E69F00", fill="#E69F0080", data=subset(mean.year, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,3),aes(x=arid.gradient, y=ihs(bio)), color="#56B4E9", fill="#56B4E970", data=subset(mean.year, Microsite=="shrub"), lwd=1.4)  + ylab("Annnual plant biomass")+ xlab("") + annotate("text", x=-4.5,y=4, label="a", size=8)+coord_cartesian(ylim=c(0, 4))
 
 ### abundance
-p2 <- ggplot(mean.year) + geom_jitter(aes(x=arid.gradient, y=ihs(abd)), color="#56B4E9", size=3, data=subset(mean.year, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=ihs(abd)), color="#E69F00", size=3, data=subset(mean.year, Microsite=="open"))  + theme_Publication()+  stat_smooth(method="lm", formula= ihs(y)~x,aes(x=arid.gradient, y=abd), color="black", fill="Grey50", data=mean.year, lwd=1.4)+ ylab("Annual plant abundance")+ xlab("")
+p2 <- ggplot(mean.year) + geom_jitter(aes(x=arid.gradient, y=ihs(abd)), color="#56B4E9", size=3, data=subset(mean.year, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=ihs(abd)), color="#E69F00", size=3, data=subset(mean.year, Microsite=="open"))  + theme_Publication()+  stat_smooth(method="lm", formula= ihs(y)~x,aes(x=arid.gradient, y=abd), color="black", fill="Grey50", data=mean.year, lwd=1.4)+ ylab("Annual plant abundance")+ xlab("")+ annotate("text", x=-4.5,y=6, label="b", size=8)
 
 ### richness
-p3 <- ggplot(mean.year) + geom_jitter(aes(x=arid.gradient, y=rich), color="#56B4E9", size=3, data=subset(mean.year, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=rich), color="#E69F00", size=3, data=subset(mean.year, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=rich), color="#E69F00", fill="#E69F0080", data=subset(mean.year, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=rich), color="#56B4E9", fill="#56B4E970", data=subset(mean.year, Microsite=="shrub"), lwd=1.4)  + ylab("Species richness") + xlab("Aridity Gradient")
+p3 <- ggplot(mean.year) + geom_jitter(aes(x=arid.gradient, y=rich), color="#56B4E9", size=3, data=subset(mean.year, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=rich), color="#E69F00", size=3, data=subset(mean.year, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=rich), color="#E69F00", fill="#E69F0080", data=subset(mean.year, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=rich), color="#56B4E9", fill="#56B4E970", data=subset(mean.year, Microsite=="shrub"), lwd=1.4)  + ylab("Species richness") + xlab("Aridity Gradient")+ annotate("text", x=-4.5,y=4, label="c", size=8)
 
 ### phylogenetic diveristy
-p4 <- ggplot(mpd.arid)+ geom_jitter(aes(x=arid.gradient, y=mpd), color="#56B4E9", size=3, data=subset(mpd.arid, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=mpd), color="#E69F00", size=3, data=subset(mpd.arid, Microsite=="open"))  +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="shrub"), color="#56B4E9",fill="#56B4E980", lwd=1.4)+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="open"), color="#E69F00",fill="#E69F0080", lwd=1.4)+ ylab("Phylogenetic Community Dissimilarity") + xlab("Aridity Gradient")+ theme_Publication()
+p4 <- ggplot(mpd.arid)+ geom_jitter(aes(x=arid.gradient, y=mpd), color="#56B4E9", size=3, data=subset(mpd.arid, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=mpd), color="#E69F00", size=3, data=subset(mpd.arid, Microsite=="open"))  +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="shrub"), color="#56B4E9",fill="#56B4E980", lwd=1.4)+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=mpd), data=subset(mpd.arid, Microsite=="open"), color="#E69F00",fill="#E69F0080", lwd=1.4)+ ylab("Phylogenetic Community Dissimilarity") + xlab("Aridity Gradient")+ theme_Publication()+ annotate("text", x=-4.5,y=1.8, label="d", size=8)
 
 grid.arrange(p1,p2,p3,p4)
 
@@ -1795,9 +1801,11 @@ nutrient.mean <- data.frame(nutrient.mean)
 m5 <- lm(nitrogen ~ arid.gradient, data=subset(nutrient.mean, microsite=="open"))
 summary(m5)
 anova(m5)
+r.squaredGLMM(m5) ## R squared values 
 
 p5 <- ggplot(nutrient.mean) + geom_jitter(aes(x=arid.gradient, y=nitrogen), color="#56B4E9", size=3, data=subset(nutrient.mean, microsite=="shrub"))+ geom_jitter(aes(x=arid.gradient, y=nitrogen), color="#E69F00", size=3, data=subset(nutrient.mean, microsite=="open"))+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=nitrogen), color="#56B4E9", fill="#56B4E980", data=subset(nutrient.mean, microsite=="shrub"), lwd=1.4) +  
-  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=nitrogen), color="#E69F00", fill="#E69F0080",data=subset(nutrient.mean, microsite=="open"), lwd=1.4)+ ylab("Nitrogen") + xlab("")+ theme_Publication() 
+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=nitrogen), color="#E69F00", fill="#E69F0080",data=subset(nutrient.mean, microsite=="open"), lwd=1.4)+ ylab("Nitrogen (ppm)") + xlab("")+ theme_Publication()+ annotate("text", x=-4.5,y=32, label="a", size=8)+coord_cartesian(ylim=c(0, 32))
+
 
 
 se <- function(x) sd(na.omit(x))/sqrt(length(na.omit(x)))
@@ -1817,7 +1825,7 @@ r.squaredGLMM(m6) ## R squared values
 
 
 ### soil moisture at emergence
-p6 <- ggplot(smc.early) + geom_jitter(aes(x=arid.gradient, y=swc.avg), color="#56B4E9", size=3, data=subset(smc.early, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=swc.avg), color="#E69F00", size=3, data=subset(smc.early, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=swc.avg), data=smc.early, lwd=1.4, color="black") + ylab("Soil moisture at emergence (%)") + xlab("Aridity Gradient")
+p6 <- ggplot(smc.early) + geom_jitter(aes(x=arid.gradient, y=swc.avg), color="#56B4E9", size=3, data=subset(smc.early, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=swc.avg), color="#E69F00", size=3, data=subset(smc.early, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=swc.avg), data=smc.early, lwd=1.4, color="black") + ylab("Soil moisture at emergence (%)") + xlab("Aridity Gradient")+ annotate("text", x=-4.5,y=30, label="c", size=8)
 
 
 hobo.means <- HOBO.data %>% group_by(season, Microsite, Site) %>% summarize(temp.avg=mean(Temp),temp.var=var(Temp),temp.sd=sd(Temp),temp.se=se(Temp),rh.avg=mean(RH, na.rm=T),rh.var=var(RH, na.rm=T),rh.se=se(RH),frost=(sum(na.omit(Temp)<0)/length(na.omit(Temp))*100),heat=(sum(na.omit(Temp)>30)/length(na.omit(Temp))*100))
@@ -1833,7 +1841,7 @@ anova(m7)
 r.squaredGLMM(m7) ## R squared values 
 
 
-p7 <- ggplot(hobo.arid) + geom_jitter(aes(x=arid.gradient, y=temp.var.x), color="#56B4E9", size=3, data=subset(hobo.arid, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=temp.var.x), color="#E69F00", size=3, data=subset(hobo.arid, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=temp.var.x), color="#E69F00", fill="#E69F0080", data=subset(hobo.arid, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=temp.var.x), color="#56B4E9", fill="#56B4E970", data=subset(hobo.arid, Microsite=="shrub"), lwd=1.4)  + ylab("Temperature variation") + xlab("Aridity Gradient")
+p7 <- ggplot(hobo.arid) + geom_jitter(aes(x=arid.gradient, y=temp.var.x), color="#56B4E9", size=3, data=subset(hobo.arid, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=temp.var.x), color="#E69F00", size=3, data=subset(hobo.arid, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=temp.var.x), color="#E69F00", fill="#E69F0080", data=subset(hobo.arid, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=temp.var.x), color="#56B4E9", fill="#56B4E970", data=subset(hobo.arid, Microsite=="shrub"), lwd=1.4)  + ylab("Temperature variation") + xlab("Aridity Gradient")+ annotate("text", x=-4.5,y=125, label="d", size=8) 
 
 shrubz <- read.csv("Data/ERG.shrub.csv")
 shrub.mean <- shrubz %>% group_by(Site, Microsite) %>% summarize(compact=mean(Compaction))
@@ -1844,14 +1852,16 @@ shrub.clim <- merge(shrub.mean, site.climate, by=c("Site"))
 m8 <- lm(log(compact)  ~  Microsite * arid.gradient, data=shrub.clim)
 summary(m8)
 anova(m8)
+r.squaredGLMM(m8) ## R squared values 
+
+
 
 p8 <- ggplot(shrub.clim) + geom_jitter(aes(x=arid.gradient, y=compact), color="#56B4E9", size=3, data=subset(shrub.clim, Microsite=="shrub"))+ geom_jitter(aes(x=arid.gradient, y=compact), color="#E69F00", size=3, data=subset(shrub.clim, Microsite=="open"))+  stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=compact), color="#56B4E9", fill="#56B4E980", data=subset(shrub.clim, Microsite=="shrub"), lwd=1.4) +  
-  stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=compact), color="#E69F00", fill="#E69F0080",data=subset(shrub.clim, Microsite=="open"), lwd=1.4)+ ylab("Soil compaction") + xlab("")+ theme_Publication() 
+  stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=compact), color="#E69F00", fill="#E69F0080",data=subset(shrub.clim, Microsite=="open"), lwd=1.4)+ ylab("Soil compaction") + xlab("")+ theme_Publication() + annotate("text", x=-4.4,y=2.5, label="b", size=8) +coord_cartesian(ylim=c(0.5, 2.5))
 
 grid.arrange(p5,p8,p6,p7)
 
 
 ```
-
 
 

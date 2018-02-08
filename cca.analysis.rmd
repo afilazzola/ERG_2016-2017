@@ -1,0 +1,172 @@
+
+```{r warning=FALSE, message=FALSE}
+library("cluster")
+library("factoextra")
+library("magrittr")
+library(vegan)
+library(tidyverse)
+
+
+
+community <- read.csv("Data/ERG.communitydata.csv")
+community[is.na(community)] <- 0
+
+
+## load in aridity gradient
+data <- read.table("Data/ERG.climatedata.csv", header=T,sep=",")
+site.names <- c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")
+season1 <- subset(data, year==2015 & month > 10 | year==2016 & month < 5)
+season2 <- subset(data, year==2016 & month > 10 | year==2017 & month < 5)
+## season1
+season1.mean <- season1 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip),wind=mean(wind.speed, na.rm=T))
+season1.mean  <- data.frame(season1.mean)
+## season2
+season2.mean <- season2 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip, na.rm=T),wind=mean(wind.speed, na.rm=T))
+season2.mean  <- data.frame(season2.mean)
+
+season1.mean <- season1 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip),wind=mean(wind.speed, na.rm=T), max.temp=abs(mean(max.temp, na.rm=T)),min.temp=abs(mean(min.temp, na.rm=T)),avg.temp=abs(mean(avg.temp, na.rm=T)))
+s1.mean <- data.frame(season1.mean)
+
+season2.mean <- season2 %>% group_by(Gradient,Site) %>% summarise(temp.var=var(avg.temp,na.rm=T),Precip=sum(Precip, na.rm=T),wind=mean(wind.speed, na.rm=T), max.temp=abs(mean(max.temp, na.rm=T)),min.temp=abs(mean(min.temp, na.rm=T)),avg.temp=abs(mean(avg.temp, na.rm=T)))
+s2.mean <- data.frame(season2.mean)
+
+arid.vals <- read.csv("Data/aridity.PET.csv")
+colnames(arid.vals)[1] <- "Site"
+s1.mean[,"arid.gradient"] <- log(s1.mean[,"Precip"]/arid.vals[,"PET"])
+s2.mean[,"arid.gradient"] <- log(s2.mean[,"Precip"]/(arid.vals[,"PET"]))
+site.climate <- rbind(s1.mean,s2.mean)
+site.climate[,"Year"] <- c(rep("2016",7),rep("2017",7))
+
+
+comm.sum <- community %>%  group_by(Microsite, Site, Year) %>% summarize_if(is.numeric, funs(sum))
+comm.sum <- data.frame(comm.sum)
+
+## coreelation matrix
+
+### Distance measures
+res.dist <- get_dist(comm.sum[,13:53], stand = TRUE, method = "euclidean")
+fviz_dist(res.dist,    gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+
+## dendrogram
+
+## transform data
+comm.trans <- decostand(comm.sum[,13:53], "hell")
+
+## clean data for ordination
+## see distribution of spp
+boxplot(comm.trans, xaxt="n")
+labs <- colnames(comm.trans)
+text(cex=0.8, x=1:41-1, y=-0.12, labs, xpd=TRUE, srt=45)
+
+## remove spp with only one instancve
+comm.trans <- comm.trans[,!colSums(comm.trans)==apply(comm.trans, 2, max)]
+
+
+## replace outliers with mean
+avg.max <- function(x) {
+  y =  max(x)
+  avg = mean(x)
+  x[x==y] <- avg
+  return(x)
+}
+  
+## dot chart to find outliers (remove or Avg)
+#dotchart(comm.trans$E.cicutarium) ## Erodium
+comm.trans[,"E.cicutarium"] <- avg.max(comm.trans$E.cicutarium) ## removed outlier
+#dotchart(comm.trans$A.wrangelianus) ## Chilean trefoil
+comm.trans[,"A.wrangelianus"] <- NULL ## removed entire species
+#dotchart(comm.trans$A.lentiginosus) ##
+comm.trans[,"A.lentiginosus"] <- avg.max(comm.trans$A.lentiginosus) ## removed outlier
+#dotchart(comm.trans$H.vulgare) ## Hordeum
+comm.trans[,"H.vulgare"] <- NULL ## removed entire species
+#dotchart(comm.trans$Pectocarya.spp) ## 
+comm.trans[,"Pectocarya.spp"] <- avg.max(comm.trans$Pectocarya.spp) ## removed outlier
+#dotchart(comm.trans$L.arizonicus) ## Lupin 
+comm.trans[,"L.arizonicus"] <- NULL ## removed entire species
+#dotchart(comm.trans$M.bellioides) ##
+comm.trans[,"M.bellioides"] <- NULL ## removed entire species
+#dotchart(comm.trans$B.nigra) ## Mustard
+comm.trans[,"B.nigra"] <- NULL ## removed entire species
+#dotchart(comm.trans$N.demissum) ## Sand Matt
+comm.trans[,"N.demissum"] <- avg.max(comm.trans$N.demissum) ## removed outlier
+#dotchart(comm.trans$L.gracilis) ## 
+comm.trans[,"L.gracilis"] <- avg.max(comm.trans$L.gracilis) ## removed outlier
+#dotchart(comm.trans$A.grandiflora) ##  Amsinckia
+comm.trans[,"A.grandiflora"] <- NULL ## removed entire species
+#dotchart(comm.trans$B.diandrus) ##  Bromus diandrus
+comm.trans[,"B.diandrus"] <- NULL ## removed entire species
+#dotchart(comm.trans$M.affinis) ##  
+comm.trans[,"M.affinis"] <- NULL ## removed entire species
+#dotchart(comm.trans$P.crenulata) ##  
+comm.trans[,"P.crenulata"] <- NULL ## removed entire species
+#dotchart(comm.trans$Erinoginum.spp) # buckwheat
+comm.trans[,"Erinoginum.spp"] <- avg.max(comm.trans$Erinoginum.spp) ## removed outlier
+#dotchart(comm.trans$C.lasiophyllus) # 
+comm.trans[,"C.lasiophyllus"] <- NULL ## removed entire species
+
+
+
+library(usdm)
+library(corrplot)
+
+## Check for collinearity
+vifcor(comm.trans)
+
+## drop Claviformis because of collinear problems in P.insularis
+comm.trans[,"C.claviformis"] <- NULL ## removed entire species
+comm.trans[,"L.decorus"] <- NULL ## removed entire species
+comm.trans[,"E.glyptosperma"] <- NULL ## removed entire species
+comm.trans[,"E.wallacei"] <- NULL ## removed entire species
+
+data.trans <- cbind(comm.sum[,c("Microsite","Site","Year")], comm.trans)
+
+## remove rows with no instances (barstow 2016)
+data.trans <- data.trans[-c(1,15),]
+data.trans <- merge(data.trans, site.climate, by=c("Site","Year"))
+
+cor.dat <- cor(comm.trans[,1:20])
+corrplot(cor.dat, method="number")
+
+
+## calculate distances
+dis <- vegdist(comm.trans[-c(1,15),], method="bray")
+
+
+## cluster analysis
+clus <- hclust(dis, "ward.D2")
+
+## cluster colours
+colz <- c("#3e4444", "#86af49", "#405d27","#c1946a")
+
+fviz_dend(clus, k = 4, # Cut in four groups
+          cex = 0.7, cex.axis=2, # label size
+          k_colors = colz,
+          color_labels_by_k = TRUE, # color labels by groups
+          rect = TRUE # Add rectangle around groups
+          ) 
+
+grp <- cutree(clus, 4)
+
+## Interpretation of classes
+
+## CA or PCA
+dca1 <- decorana(data.trans[,4:24]) ## length of gradient >2 & determine relative differences in community composition 
+
+test <- data.trans[,4:24]
+rownames(test) <- paste(data.trans$Site, 1:26)
+
+## conduct ordination
+ord <- cca(test~Microsite+arid.gradient, Z=data.trans["Year"], data=data.trans)
+summary(ord)
+
+
+## calculate priority
+spp.priority <- colSums(data.trans[,4:24])
+
+## plot ordination
+par(mar=c(4.5,4.5,0.5,0.5))
+plot(ord)
+#ordiellipse(ord, grp, lty = 2, col = "grey80", draw="polygon", alpha=150)
+orditorp(ord, display = "species", cex = 0.7, col = "darkorange3", priority=spp.priority, air=0.5)
+orditorp(ord, display = "sites", cex = 0.7, col = "darkslateblue", air=0.1)
+
