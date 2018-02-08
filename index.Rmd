@@ -1737,7 +1737,7 @@ plot(ord.env)
 
 ### Short-term vs long-term effects
 
-[Repeated of analyses separating long- and short- term effects]("longshort.effects.html")
+[Repeated of analyses separating long- and short- term effects](longshort.effects.html)
 
 
 ### Mixed model resuilts
