@@ -1674,9 +1674,12 @@ smc.avg[,"grp"] <- as.factor(c(3,3,2,1,4,4,1,1,4,4,3,3,2,2))
 
 boxplot(mean.smc ~ grp, data=smc.avg)
 
+## CA or PCA
+dca1 <- decorana(comm.trans) ## length of gradient >2 & determine relative differences in community composition 
+
+
 ## conduct ordination
-ord <- rda(comm.trans)
-(R2adj <- RsquareAdj(rda1)$adj.r.squared) ## 50.4% of variation explained
+ord <- cca(comm.trans)
 
 ## calculate priority
 spp.priority <- colSums(comm.trans)
@@ -1684,9 +1687,10 @@ spp.priority <- colSums(comm.trans)
 ## plot ordination
 par(mar=c(4.5,4.5,0.5,0.5))
 plot(ord, type="n")
-ordiellipse(ord, grp, lty = 2, col = colz, draw="polygon", alpha=150)
-orditorp(ord, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=0.5)
-orditorp(ord, display = "sites", cex = 0.7, col = "black")
+ordiellipse(ord, grp, lty = 2, col = "grey80", draw="polygon", alpha=150)
+orditorp(ord, display = "species", cex = 0.7, col = "darkorange3", priority=spp.priority, air=0.5)
+orditorp(ord, display = "sites", cex = 0.7, col = "darkslateblue", air=0.1)
+
 
 ##collect environmental variables for site
 nutrients <- read.csv("Data/ERG.soilnutrients.csv")
@@ -1713,12 +1717,28 @@ plot(ord.env)
 
 # ordicluster(ord, clus, col="blue")
 
+# ## conduct ordination with gradient analysis
+# ord <- cca(comm.trans~SMC+N+P+Temp.,data=envs)
+# (R2adj <- RsquareAdj(ord)$adj.r.squared) ## 30.0% of variation explained
+# 
+# ord <- cca(comm.trans~.,data=envs)
+# ord.0 <- cca(comm.trans~1,data=envs)
+# m <- ordistep(ord.0, scope=formula(ord))
+# 
+# 
+# ## plot ordination
+# par(mar=c(4.5,4.5,0.5,0.5))
+# plot(ord, type="n") # display="bp", ylim=c(-2,2),xlim=c(-2,2))
+# ordiellipse(ord, grp, lty = 2, col = colz, draw="polygon", alpha=150)
+# orditorp(ord, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=0.5)
+# orditorp(ord, display = "sites", cex = 0.7, col = "black", air=0.1)
+
 ```
 
 ### Short-term vs long-term effects
-```{r}
-[Repeated of analyses separating long- and short- term effets](../longshort.effects.html)
-```
+
+![Repeated of analyses separating long- and short- term effects]("./longshort.effects.html")
+
 
 ### Mixed model resuilts
 ```{r}
@@ -1746,6 +1766,6 @@ anova(m3)
 
 
 ggplot(mean.year, aes(x=arid.gradient, y=bio, fill=Microsite, colour=Microsite)) + theme_Publication()+ geom_point()
-
-stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#E69F00",fill="#E69F0040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#56B4E9", fill="#56B4E940", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
+# 
+# stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#E69F00",fill="#E69F0040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#56B4E9", fill="#56B4E940", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
 
