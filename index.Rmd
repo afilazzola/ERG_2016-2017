@@ -46,6 +46,10 @@ library(ggthemes)
 library(usdm)
 library(broom)
 require(gridExtra)
+library(lme4)
+library(lmerTest) ## approximations for tests
+library(MuMIn) ## calculates R squared
+library(lmPerm)
 ```
 
 
@@ -371,7 +375,7 @@ gradient2.season2 <- pca2$x[,2]
 ```
 
 ### Compare gradient to phytometer
-```{r,  fig.width=12, fig.height=7}
+```{r,  fig.width=12, fig.height=7, echo=FALSE}
 # crs.world <-CRS("+proj=longlat +datum=WGS84")
 # gps <- data.frame(x=site.gps$long,y=site.gps$lat)
 # coordinates(gps) <- ~x+y
@@ -415,223 +419,223 @@ site.climate[,"Year"] <- as.factor(c(rep("2016",7),rep("2017",7)))
 ## combine climate data with census
 mean.phyto  <- merge(mean.phyto , site.climate, by=c("Year","Site"))
 
-phyto.2016 <- subset(mean.phyto, Year==2016)
-
-plot(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"],1), phyto.2016[phyto.2016$Microsite=="open","phyto.biomass"], ylim=c(0,2), ylab=c("all phytometer biomass (g)"), xlab=c("aridity gradient"))
-points(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"],2), phyto.2016[phyto.2016$Microsite=="shrub","phyto.biomass"], pch=19)
-legend(-4.5,1.8, c("shrub","open"), pch=c(19,1))
-text(-2.3, 1.8, "2016", cex=1.5)
-
-plot(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"], rii.mean[rii.mean$Year==2016,"phyto.biomass"], ylim=c(-0.4,0.4), ylab="RII all phytometer biomass", pch=19, xlab=c("aridity gradient"))
-text(-2.3, 0.38, "2016", cex=1.5)
-
-
-phyto.2017 <- subset(mean.phyto, Year==2017)
-
-plot(jitter(phyto.2017[phyto.2017$Microsite=="open","arid.gradient"],1), phyto.2017[phyto.2017$Microsite=="open","phyto.biomass"], ylim=c(0,3), xlab=c("aridity gradient"),ylab=c("all phytometer biomass (g)"))
-points(jitter(phyto.2017[phyto.2017$Microsite=="open","arid.gradient"],2), phyto.2017[phyto.2017$Microsite=="shrub","phyto.biomass"], pch=19)
-legend(-4.5,1.8, c("shrub","open"), pch=c(19,1))
-text(-2.0, 2.8, "2017", cex=1.5)
-
-plot(phyto.2017[phyto.2017$Microsite=="open","arid.gradient"], rii.mean[rii.mean$Year==2017,"phyto.biomass"], ylim=c(-0.4,0.4), ylab="RII all phytometer biomass", pch=19, xlab=c("aridity gradient"))
-text(-2.0, 0.38, "2017", cex=1.5)
-
-
-## regress gradient and microsite on biomass for phytometers in 2016
-m1 <- lm(ihs(Phacelia.biomass)~arid.gradient * Microsite, data=phyto.2016)
-summary(m1) ## nothing significant
-m2 <- lm(ihs(Plantago.biomass)~arid.gradient * Microsite, data=phyto.2016)
-summary(m2) ## nothing significant
-m3 <- lm(ihs(Salvia.biomass)~arid.gradient * Microsite, data=phyto.2016)
-summary(m3)## aridity significant
-
-## regress gradient and microsite on biomass for phytometers in 2017
-m4 <- lm(ihs(Phacelia.biomass)~arid.gradient * Microsite, data=phyto.2017)
-summary(m4) ## nothing significant
-m5 <- lm(ihs(Plantago.biomass)~arid.gradient * Microsite, data=phyto.2017)
-summary(m5) ## aridity significant
-m6 <- lm(ihs(Salvia.biomass)~arid.gradient * Microsite, data=phyto.2017)
-summary(m6)## nothing significant
+# phyto.2016 <- subset(mean.phyto, Year==2016)
 # 
-# ## Phacelia season 1
-# plot(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,1), phyto.2016[phyto.2016$Microsite=="open","Phacelia.biomass"], ylim=c(0,2))
-# points(jitter(phyto.2016[phyto.2016$Microsite=="shrub","arid.gradient"] ,2), phyto.2016[phyto.2016$Microsite=="shrub","Phacelia.biomass"], pch=19)
+# plot(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"],1), phyto.2016[phyto.2016$Microsite=="open","phyto.biomass"], ylim=c(0,2), ylab=c("all phytometer biomass (g)"), xlab=c("aridity gradient"))
+# points(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"],2), phyto.2016[phyto.2016$Microsite=="shrub","phyto.biomass"], pch=19)
+# legend(-4.5,1.8, c("shrub","open"), pch=c(19,1))
+# text(-2.3, 1.8, "2016", cex=1.5)
 # 
+# plot(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"], rii.mean[rii.mean$Year==2016,"phyto.biomass"], ylim=c(-0.4,0.4), ylab="RII all phytometer biomass", pch=19, xlab=c("aridity gradient"))
+# text(-2.3, 0.38, "2016", cex=1.5)
+# 
+# 
+# phyto.2017 <- subset(mean.phyto, Year==2017)
+# 
+# plot(jitter(phyto.2017[phyto.2017$Microsite=="open","arid.gradient"],1), phyto.2017[phyto.2017$Microsite=="open","phyto.biomass"], ylim=c(0,3), xlab=c("aridity gradient"),ylab=c("all phytometer biomass (g)"))
+# points(jitter(phyto.2017[phyto.2017$Microsite=="open","arid.gradient"],2), phyto.2017[phyto.2017$Microsite=="shrub","phyto.biomass"], pch=19)
+# legend(-4.5,1.8, c("shrub","open"), pch=c(19,1))
+# text(-2.0, 2.8, "2017", cex=1.5)
+# 
+# plot(phyto.2017[phyto.2017$Microsite=="open","arid.gradient"], rii.mean[rii.mean$Year==2017,"phyto.biomass"], ylim=c(-0.4,0.4), ylab="RII all phytometer biomass", pch=19, xlab=c("aridity gradient"))
+# text(-2.0, 0.38, "2017", cex=1.5)
+# 
+# 
+# ## regress gradient and microsite on biomass for phytometers in 2016
 # m1 <- lm(ihs(Phacelia.biomass)~arid.gradient * Microsite, data=phyto.2016)
+# summary(m1) ## nothing significant
 # m2 <- lm(ihs(Plantago.biomass)~arid.gradient * Microsite, data=phyto.2016)
+# summary(m2) ## nothing significant
 # m3 <- lm(ihs(Salvia.biomass)~arid.gradient * Microsite, data=phyto.2016)
+# summary(m3)## aridity significant
 # 
-# plot(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] , rii.mean[rii.mean$Year==2016,"Phacelia.biomass"], ylim=c(-0.4,0.4))
-# 
-# ## Plantago season 1
-# plot(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,1), phyto.2016[phyto.2016$Microsite=="open","Plantago.biomass"], ylim=c(0,2))
-# points(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,2), phyto.2016[phyto.2016$Microsite=="shrub","Plantago.biomass"], pch=19)
-# 
-# plot(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] , rii.mean[rii.mean$Year==2016,"Plantago.biomass"], ylim=c(-0.4,0.4))
-# 
-# ## Salvia season 1
-# plot(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,1), phyto.2016[phyto.2016$Microsite=="open","Salvia.biomass"], ylim=c(0,2))
-# points(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,2), phyto.2016[phyto.2016$Microsite=="shrub","Salvia.biomass"], pch=19)
-# 
-# plot(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] , rii.mean[rii.mean$Year==2016,"Salvia.biomass"], ylim=c(-0.4,0.4))
-# 
-# 
-# 
-# ## Phacelia season 2
-# plot(jitter(gradient1.season2,1), phyto.2017[phyto.2017$Microsite=="open","Phacelia.biomass"], ylim=c(0,2))
-# points(jitter(gradient1.season2,2), phyto.2017[phyto.2017$Microsite=="shrub","Phacelia.biomass"], pch=19)
-# 
-# plot(gradient1.season2, rii.mean[rii.mean$Year==2017,"Phacelia.biomass"], ylim=c(-0.4,0.4))
-# 
-# 
-# ## Plantago season 2
-# plot(jitter(gradient1.season2,1), phyto.2017[phyto.2017$Microsite=="open","Plantago.biomass"], ylim=c(0,2))
-# points(jitter(gradient1.season2,2), phyto.2017[phyto.2017$Microsite=="shrub","Plantago.biomass"], pch=19)
-# 
-# plot(gradient1.season2, rii.mean[rii.mean$Year==2017,"Plantago.biomass"], ylim=c(-0.4,0.4))
-# 
-# ## Salvia season 2
-# plot(jitter(gradient1.season2,1), phyto.2017[phyto.2017$Microsite=="open","Salvia.biomass"], ylim=c(0,2))
-# points(jitter(gradient1.season2,2), phyto.2017[phyto.2017$Microsite=="shrub","Salvia.biomass"], pch=19)
-# 
-# 
-# plot(gradient1.season2, rii.mean[rii.mean$Year==2017,"Salvia.biomass"], ylim=c(-0.4,0.4))
-
-
-## both seasons
-
-
-## responses
-plot(mean.phyto[mean.phyto$Microsite=="open","arid.gradient"], mean.phyto[mean.phyto$Microsite=="open","phyto.biomass"], ylim=c(0,3), ylab=c("all phytometer biomass (g)"))
-points(jitter(mean.phyto[mean.phyto$Microsite=="shrub","arid.gradient"],1), mean.phyto[mean.phyto$Microsite=="shrub","phyto.biomass"], pch=19)
-legend(-4.5,2.8, c("shrub","open"), pch=c(19,1))
-text(-2.3, 2.8, "both years", cex=1.3)
-
-# 
-# ## Phacelia
-# plot(jitter(mean.phyto[mean.phyto$Microsite=="open","arid.gradient"],1), mean.phyto[mean.phyto$Microsite=="open","Phacelia.biomass"], ylim=c(0,2))
-# points(jitter(mean.phyto[mean.phyto$Microsite=="shrub","arid.gradient"],2), mean.phyto[mean.phyto$Microsite=="shrub","Phacelia.biomass"], pch=19)
-# m1 <- lm(ihs(Phacelia.biomass) ~ arid.gradient * Microsite, data=mean.phyto)
-# summary(m1)
-# 
-# ## Plantago 
-# plot(jitter(mean.phyto[mean.phyto$Microsite=="open","arid.gradient"],1), mean.phyto[mean.phyto$Microsite=="open","Plantago.biomass"], ylim=c(0,0.5))
-# points(jitter(mean.phyto[mean.phyto$Microsite=="shrub","arid.gradient"],2), mean.phyto[mean.phyto$Microsite=="shrub","Plantago.biomass"], pch=19)
-# m2 <- lm(ihs(Phacelia.biomass) ~ arid.gradient * Microsite, data=mean.phyto)
-# summary(m2)
+# ## regress gradient and microsite on biomass for phytometers in 2017
+# m4 <- lm(ihs(Phacelia.biomass)~arid.gradient * Microsite, data=phyto.2017)
+# summary(m4) ## nothing significant
+# m5 <- lm(ihs(Plantago.biomass)~arid.gradient * Microsite, data=phyto.2017)
+# summary(m5) ## aridity significant
+# m6 <- lm(ihs(Salvia.biomass)~arid.gradient * Microsite, data=phyto.2017)
+# summary(m6)## nothing significant
+# # 
+# # ## Phacelia season 1
+# # plot(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,1), phyto.2016[phyto.2016$Microsite=="open","Phacelia.biomass"], ylim=c(0,2))
+# # points(jitter(phyto.2016[phyto.2016$Microsite=="shrub","arid.gradient"] ,2), phyto.2016[phyto.2016$Microsite=="shrub","Phacelia.biomass"], pch=19)
+# # 
+# # m1 <- lm(ihs(Phacelia.biomass)~arid.gradient * Microsite, data=phyto.2016)
+# # m2 <- lm(ihs(Plantago.biomass)~arid.gradient * Microsite, data=phyto.2016)
+# # m3 <- lm(ihs(Salvia.biomass)~arid.gradient * Microsite, data=phyto.2016)
+# # 
+# # plot(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] , rii.mean[rii.mean$Year==2016,"Phacelia.biomass"], ylim=c(-0.4,0.4))
+# # 
+# # ## Plantago season 1
+# # plot(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,1), phyto.2016[phyto.2016$Microsite=="open","Plantago.biomass"], ylim=c(0,2))
+# # points(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,2), phyto.2016[phyto.2016$Microsite=="shrub","Plantago.biomass"], pch=19)
+# # 
+# # plot(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] , rii.mean[rii.mean$Year==2016,"Plantago.biomass"], ylim=c(-0.4,0.4))
+# # 
+# # ## Salvia season 1
+# # plot(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,1), phyto.2016[phyto.2016$Microsite=="open","Salvia.biomass"], ylim=c(0,2))
+# # points(jitter(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] ,2), phyto.2016[phyto.2016$Microsite=="shrub","Salvia.biomass"], pch=19)
+# # 
+# # plot(phyto.2016[phyto.2016$Microsite=="open","arid.gradient"] , rii.mean[rii.mean$Year==2016,"Salvia.biomass"], ylim=c(-0.4,0.4))
+# # 
+# # 
+# # 
+# # ## Phacelia season 2
+# # plot(jitter(gradient1.season2,1), phyto.2017[phyto.2017$Microsite=="open","Phacelia.biomass"], ylim=c(0,2))
+# # points(jitter(gradient1.season2,2), phyto.2017[phyto.2017$Microsite=="shrub","Phacelia.biomass"], pch=19)
+# # 
+# # plot(gradient1.season2, rii.mean[rii.mean$Year==2017,"Phacelia.biomass"], ylim=c(-0.4,0.4))
+# # 
+# # 
+# # ## Plantago season 2
+# # plot(jitter(gradient1.season2,1), phyto.2017[phyto.2017$Microsite=="open","Plantago.biomass"], ylim=c(0,2))
+# # points(jitter(gradient1.season2,2), phyto.2017[phyto.2017$Microsite=="shrub","Plantago.biomass"], pch=19)
+# # 
+# # plot(gradient1.season2, rii.mean[rii.mean$Year==2017,"Plantago.biomass"], ylim=c(-0.4,0.4))
+# # 
+# # ## Salvia season 2
+# # plot(jitter(gradient1.season2,1), phyto.2017[phyto.2017$Microsite=="open","Salvia.biomass"], ylim=c(0,2))
+# # points(jitter(gradient1.season2,2), phyto.2017[phyto.2017$Microsite=="shrub","Salvia.biomass"], pch=19)
+# # 
+# # 
+# # plot(gradient1.season2, rii.mean[rii.mean$Year==2017,"Salvia.biomass"], ylim=c(-0.4,0.4))
 # 
 # 
-# ## Salvia season 1
-# plot(jitter(mean.phyto[mean.phyto$Microsite=="open","arid.gradient"],1), mean.phyto[mean.phyto$Microsite=="open","Salvia.biomass"], ylim=c(0,2))
-# points(jitter(mean.phyto[mean.phyto$Microsite=="shrub","arid.gradient"],2), mean.phyto[mean.phyto$Microsite=="shrub","Salvia.biomass"], pch=19)
-# m3 <- lm(ihs(Salvia.biomass) ~ arid.gradient * Microsite, data=mean.phyto)
-# summary(m3)
-
-
-
-### Rii plots
-
-rii.mean <- merge(rii.mean, site.climate, by=c("Year","Site"))
-
-
-## biomass by RII
-plot(mean.phyto[mean.phyto$Microsite=="open","Phacelia.biomass"], rii.mean[,"Phacelia.biomass"], ylim=c(-0.3,0.3), pch=19, ylab="RII biomass", xlab="average phytometer biomass per site")
-points(mean.phyto[mean.phyto$Microsite=="open","Plantago.biomass"], rii.mean[,"Plantago.biomass"], pch=21, bg="blue")
-points(mean.phyto[mean.phyto$Microsite=="open","Salvia.biomass"], rii.mean[,"Salvia.biomass"], pch=21, bg="red")
-abline(h=0, lty=2, lwd=2)
-legend(0.38,-0.15, c("Phacelia","Plantago","Salvia"), pch=21, pt.bg=c("black","blue","red"))
-
-
-## rii variability
-
-
-plot(rii.mean[,"arid.gradient"], rii.mean[,"Phacelia.biomass"], ylim=c(-0.5,0.5), pch=19, ylab="Rii phytometer biomass", xlab="aridity gradient")
-points(rii.mean[,"arid.gradient"], rii.mean[,"Plantago.biomass"], pch=21, bg="blue")
-points(rii.mean[,"arid.gradient"], rii.mean[,"Salvia.biomass"], pch=21, bg="red")
-abline(h=0, lty=2, lwd=2)
-legend(-4.5, 0.45, c("Phacelia","Plantago","Salvia"), pch=21, pt.bg=c("black","blue","red"))
-
-## compare convex hull
-## hull function
-Plot_ConvexHull<-function(xcoord, ycoord, lcolor){
-  hpts <- chull(x = xcoord, y = ycoord)
-  hpts <- c(hpts, hpts[1])
-  lines(xcoord[hpts], ycoord[hpts], col = lcolor)
-}  
-
-Plot_ConvexHull(xcoord = rii.mean[,"arid.gradient"], ycoord = rii.mean[,"Phacelia.biomass"], lcolor = "black")
-Plot_ConvexHull(xcoord = rii.mean[,"arid.gradient"], ycoord = rii.mean[,"Plantago.biomass"], lcolor = "blue")
-Plot_ConvexHull(xcoord = rii.mean[,"arid.gradient"], ycoord = rii.mean[,"Salvia.biomass"], lcolor = "red")
-
-
-r.df <- rii.mean[,c("arid.gradient","Phacelia.biomass","Plantago.biomass","Salvia.biomass")]
-
-
-## transform data into long format
-r.df <- gather(r.df, species, biomass, 2:4)
-
-
-## function to create a convex hull around data
-hull.time <- function(df){
-  df[chull(df$arid.gradient,df$biomass),]  # chull really is useful, even outside of contrived examples.
-  }
-
-## break data into lists and recombined to apply polygon
-splitData <- split(r.df, r.df$species)
-appliedData <- lapply(splitData, hull.time)
-combinedData <- do.call(rbind, appliedData)
-
-## create polygon 
-poly1 <- ggplot(r.df, aes(x=arid.gradient, y=biomass))+
-geom_polygon(data = combinedData,  # This is also a nice example of how to plot
-                          aes(x=arid.gradient, y=biomass, group = species, color=species), fill=NA,  # two superimposed geoms
-                          alpha = 1/2)  + theme_bw()    
-poly1
-
-
-## regress rii on gradient
-m1 <- lm(Phacelia.biomass~arid.gradient, data=rii.mean)
-summary(m1) ## not significant
-m2 <- lm(Plantago.biomass~arid.gradient, data=rii.mean)
-summary(m2) ## not significant
-m3 <- lm(Salvia.biomass~arid.gradient, data=rii.mean)
-summary(m3) ## not significant
-
-# 
-# m1 <- lm(Phacelia.biomass~arid.gradient, data=subset(rii.mean,Year == 2016))
-# m2 <- lm(Plantago.biomass~arid.gradient, data=subset(rii.mean,Year == 2016))
-# m3 <- lm(Salvia.biomass~arid.gradient, data=subset(rii.mean,Year == 2016))
+# ## both seasons
 # 
 # 
-# m1 <- lm(Phacelia.biomass~arid.gradient, data=subset(rii.mean,Year == 2017))
-# m2 <- lm(Plantago.biomass~arid.gradient, data=subset(rii.mean,Year == 2017))
-# m3 <- lm(Salvia.biomass~arid.gradient, data=subset(rii.mean,Year == 2017))
+# ## responses
+# plot(mean.phyto[mean.phyto$Microsite=="open","arid.gradient"], mean.phyto[mean.phyto$Microsite=="open","phyto.biomass"], ylim=c(0,3), ylab=c("all phytometer biomass (g)"))
+# points(jitter(mean.phyto[mean.phyto$Microsite=="shrub","arid.gradient"],1), mean.phyto[mean.phyto$Microsite=="shrub","phyto.biomass"], pch=19)
+# legend(-4.5,2.8, c("shrub","open"), pch=c(19,1))
+# text(-2.3, 2.8, "both years", cex=1.3)
+# 
+# # 
+# # ## Phacelia
+# # plot(jitter(mean.phyto[mean.phyto$Microsite=="open","arid.gradient"],1), mean.phyto[mean.phyto$Microsite=="open","Phacelia.biomass"], ylim=c(0,2))
+# # points(jitter(mean.phyto[mean.phyto$Microsite=="shrub","arid.gradient"],2), mean.phyto[mean.phyto$Microsite=="shrub","Phacelia.biomass"], pch=19)
+# # m1 <- lm(ihs(Phacelia.biomass) ~ arid.gradient * Microsite, data=mean.phyto)
+# # summary(m1)
+# # 
+# # ## Plantago 
+# # plot(jitter(mean.phyto[mean.phyto$Microsite=="open","arid.gradient"],1), mean.phyto[mean.phyto$Microsite=="open","Plantago.biomass"], ylim=c(0,0.5))
+# # points(jitter(mean.phyto[mean.phyto$Microsite=="shrub","arid.gradient"],2), mean.phyto[mean.phyto$Microsite=="shrub","Plantago.biomass"], pch=19)
+# # m2 <- lm(ihs(Phacelia.biomass) ~ arid.gradient * Microsite, data=mean.phyto)
+# # summary(m2)
+# # 
+# # 
+# # ## Salvia season 1
+# # plot(jitter(mean.phyto[mean.phyto$Microsite=="open","arid.gradient"],1), mean.phyto[mean.phyto$Microsite=="open","Salvia.biomass"], ylim=c(0,2))
+# # points(jitter(mean.phyto[mean.phyto$Microsite=="shrub","arid.gradient"],2), mean.phyto[mean.phyto$Microsite=="shrub","Salvia.biomass"], pch=19)
+# # m3 <- lm(ihs(Salvia.biomass) ~ arid.gradient * Microsite, data=mean.phyto)
+# # summary(m3)
 # 
 # 
-# plot(rii.mean[,"min.temp"], rii.mean[,"Phacelia.biomass"], ylim=c(-0.4,0.4), pch=19)
-# points(rii.mean[,"min.temp"], rii.mean[,"Plantago.biomass"], pch=21, bg="blue")
-# points(rii.mean[,"min.temp"], rii.mean[,"Salvia.biomass"], pch=21, bg="red")
+# 
+# ### Rii plots
+# 
+# rii.mean <- merge(rii.mean, site.climate, by=c("Year","Site"))
+# 
+# 
+# ## biomass by RII
+# plot(mean.phyto[mean.phyto$Microsite=="open","Phacelia.biomass"], rii.mean[,"Phacelia.biomass"], ylim=c(-0.3,0.3), pch=19, ylab="RII biomass", xlab="average phytometer biomass per site")
+# points(mean.phyto[mean.phyto$Microsite=="open","Plantago.biomass"], rii.mean[,"Plantago.biomass"], pch=21, bg="blue")
+# points(mean.phyto[mean.phyto$Microsite=="open","Salvia.biomass"], rii.mean[,"Salvia.biomass"], pch=21, bg="red")
 # abline(h=0, lty=2, lwd=2)
+# legend(0.38,-0.15, c("Phacelia","Plantago","Salvia"), pch=21, pt.bg=c("black","blue","red"))
 # 
-# rii.test <- subset(rii.mean, Gradient.x>3 & Year == 2017 | Year == 2016)
+# 
+# ## rii variability
 # 
 # 
-# plot(rii.test[,"arid.gradient"], rii.test[,"Phacelia.biomass"], ylim=c(-0.4,0.4), pch=19)
-# points(rii.test[,"arid.gradient"], rii.test[,"Plantago.biomass"], pch=21, bg="blue")
-# points(rii.test[,"arid.gradient"], rii.test[,"Salvia.biomass"], pch=21, bg="red")
+# plot(rii.mean[,"arid.gradient"], rii.mean[,"Phacelia.biomass"], ylim=c(-0.5,0.5), pch=19, ylab="Rii phytometer biomass", xlab="aridity gradient")
+# points(rii.mean[,"arid.gradient"], rii.mean[,"Plantago.biomass"], pch=21, bg="blue")
+# points(rii.mean[,"arid.gradient"], rii.mean[,"Salvia.biomass"], pch=21, bg="red")
 # abline(h=0, lty=2, lwd=2)
+# legend(-4.5, 0.45, c("Phacelia","Plantago","Salvia"), pch=21, pt.bg=c("black","blue","red"))
+# 
+# ## compare convex hull
+# ## hull function
+# Plot_ConvexHull<-function(xcoord, ycoord, lcolor){
+#   hpts <- chull(x = xcoord, y = ycoord)
+#   hpts <- c(hpts, hpts[1])
+#   lines(xcoord[hpts], ycoord[hpts], col = lcolor)
+# }  
+# 
+# Plot_ConvexHull(xcoord = rii.mean[,"arid.gradient"], ycoord = rii.mean[,"Phacelia.biomass"], lcolor = "black")
+# Plot_ConvexHull(xcoord = rii.mean[,"arid.gradient"], ycoord = rii.mean[,"Plantago.biomass"], lcolor = "blue")
+# Plot_ConvexHull(xcoord = rii.mean[,"arid.gradient"], ycoord = rii.mean[,"Salvia.biomass"], lcolor = "red")
 # 
 # 
-# plot(rii.mean[,"arid.gradient"], rii.mean[,"Phacelia"], ylim=c(-0.4,0.4), pch=19)
-# points(rii.mean[,"arid.gradient"], rii.mean[,"Plantago"], pch=21, bg="blue")
-# points(rii.mean[,"arid.gradient"], rii.mean[,"Salvia"], pch=21, bg="red")
-# abline(h=0, lty=2, lwd=2)
+# r.df <- rii.mean[,c("arid.gradient","Phacelia.biomass","Plantago.biomass","Salvia.biomass")]
 # 
 # 
-# m1 <- lm(Phacelia~ poly(arid.gradient,2), data=rii.mean)
-# summary(m1)
+# ## transform data into long format
+# r.df <- gather(r.df, species, biomass, 2:4)
+# 
+# 
+# ## function to create a convex hull around data
+# hull.time <- function(df){
+#   df[chull(df$arid.gradient,df$biomass),]  # chull really is useful, even outside of contrived examples.
+#   }
+# 
+# ## break data into lists and recombined to apply polygon
+# splitData <- split(r.df, r.df$species)
+# appliedData <- lapply(splitData, hull.time)
+# combinedData <- do.call(rbind, appliedData)
+# 
+# ## create polygon 
+# poly1 <- ggplot(r.df, aes(x=arid.gradient, y=biomass))+
+# geom_polygon(data = combinedData,  # This is also a nice example of how to plot
+#                           aes(x=arid.gradient, y=biomass, group = species, color=species), fill=NA,  # two superimposed geoms
+#                           alpha = 1/2)  + theme_bw()    
+# poly1
+# 
+# 
+# ## regress rii on gradient
+# m1 <- lm(Phacelia.biomass~arid.gradient, data=rii.mean)
+# summary(m1) ## not significant
 # m2 <- lm(Plantago.biomass~arid.gradient, data=rii.mean)
+# summary(m2) ## not significant
 # m3 <- lm(Salvia.biomass~arid.gradient, data=rii.mean)
+# summary(m3) ## not significant
+# 
+# # 
+# # m1 <- lm(Phacelia.biomass~arid.gradient, data=subset(rii.mean,Year == 2016))
+# # m2 <- lm(Plantago.biomass~arid.gradient, data=subset(rii.mean,Year == 2016))
+# # m3 <- lm(Salvia.biomass~arid.gradient, data=subset(rii.mean,Year == 2016))
+# # 
+# # 
+# # m1 <- lm(Phacelia.biomass~arid.gradient, data=subset(rii.mean,Year == 2017))
+# # m2 <- lm(Plantago.biomass~arid.gradient, data=subset(rii.mean,Year == 2017))
+# # m3 <- lm(Salvia.biomass~arid.gradient, data=subset(rii.mean,Year == 2017))
+# # 
+# # 
+# # plot(rii.mean[,"min.temp"], rii.mean[,"Phacelia.biomass"], ylim=c(-0.4,0.4), pch=19)
+# # points(rii.mean[,"min.temp"], rii.mean[,"Plantago.biomass"], pch=21, bg="blue")
+# # points(rii.mean[,"min.temp"], rii.mean[,"Salvia.biomass"], pch=21, bg="red")
+# # abline(h=0, lty=2, lwd=2)
+# # 
+# # rii.test <- subset(rii.mean, Gradient.x>3 & Year == 2017 | Year == 2016)
+# # 
+# # 
+# # plot(rii.test[,"arid.gradient"], rii.test[,"Phacelia.biomass"], ylim=c(-0.4,0.4), pch=19)
+# # points(rii.test[,"arid.gradient"], rii.test[,"Plantago.biomass"], pch=21, bg="blue")
+# # points(rii.test[,"arid.gradient"], rii.test[,"Salvia.biomass"], pch=21, bg="red")
+# # abline(h=0, lty=2, lwd=2)
+# # 
+# # 
+# # plot(rii.mean[,"arid.gradient"], rii.mean[,"Phacelia"], ylim=c(-0.4,0.4), pch=19)
+# # points(rii.mean[,"arid.gradient"], rii.mean[,"Plantago"], pch=21, bg="blue")
+# # points(rii.mean[,"arid.gradient"], rii.mean[,"Salvia"], pch=21, bg="red")
+# # abline(h=0, lty=2, lwd=2)
+# # 
+# # 
+# # m1 <- lm(Phacelia~ poly(arid.gradient,2), data=rii.mean)
+# # summary(m1)
+# # m2 <- lm(Plantago.biomass~arid.gradient, data=rii.mean)
+# # m3 <- lm(Salvia.biomass~arid.gradient, data=rii.mean)
 ```
 
 
@@ -748,46 +752,46 @@ mean.spp <- merge(mean.spp, site.climate, by.y=c("Year","Site"))
 # summary(m3)
 
 
-## both seasons
-
-## richness
-plot(mean.spp[mean.spp$Microsite=="open","arid.gradient"], mean.spp[mean.spp$Microsite=="open","richness"],  ylab="average site richness", xlab="aridity gradient")
-points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],mean.spp[mean.spp$Microsite=="shrub","richness"], pch=19) 
-
-m1 <- lm(richness~arid.gradient*Microsite, data=mean.spp)
-summary(m1)
-
-m1 <- lm(richness~poly(arid.gradient,2), data=mean.spp)
-summary(m1)
-
-ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=richness, fill=Microsite, color=Microsite), size=3) + 
- scale_color_manual(values=c("#E69F00","#56B4E9")) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=richness), color="black")+ ylab("Species richness") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
-
-## abundance
-plot(mean.spp[mean.spp$Microsite=="open","arid.gradient"], mean.spp[mean.spp$Microsite=="open","abd"], ylab="average site abundance", xlab="aridity gradient")
-points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],mean.spp[mean.spp$Microsite=="shrub","abd"], pch=19) 
-
-m2 <- lm(abd~arid.gradient*Microsite, data=mean.spp)
-summary(m2)
-
-m2 <- lm(ihs(abd)~arid.gradient, data=mean.spp)
-summary(m2)
-
-ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(abd), fill=Microsite, color=Microsite), size=3)+ 
- scale_color_manual(values=c("#E69F00","#56B4E9"))  +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(abd)), color="black")+ ylab("Annual abundance") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
-
-
-
-## biomass
-plot(mean.spp[mean.spp$Microsite=="open","arid.gradient"], ihs(mean.spp[mean.spp$Microsite=="open","biomass"]), ylab="average site biomass", xlab="aridity gradient")
-points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],ihs(mean.spp[mean.spp$Microsite=="shrub","biomass"]), pch=19)
-
-m3 <- lm(ihs(biomass)~arid.gradient*Microsite, data=mean.spp)
-summary(m3)
-
-ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(biomass), fill=Microsite, color=Microsite), size=3)+ 
- scale_color_manual(values=c("#E69F00","#56B4E9"))+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(biomass)), color="#56B4E9", data=subset(mean.spp, Microsite=="shrub"))  +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(biomass)), data=subset(mean.spp, Microsite=="open"), color="#E69F00")+ ylab("Annual biomass") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
-
+# ## both seasons
+# 
+# ## richness
+# plot(mean.spp[mean.spp$Microsite=="open","arid.gradient"], mean.spp[mean.spp$Microsite=="open","richness"],  ylab="average site richness", xlab="aridity gradient")
+# points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],mean.spp[mean.spp$Microsite=="shrub","richness"], pch=19) 
+# 
+# m1 <- lm(richness~arid.gradient*Microsite, data=mean.spp)
+# summary(m1)
+# 
+# m1 <- lm(richness~poly(arid.gradient,2), data=mean.spp)
+# summary(m1)
+# 
+# ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=richness, fill=Microsite, color=Microsite), size=3) + 
+#  scale_color_manual(values=c("#E69F00","#56B4E9")) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=arid.gradient, y=richness), color="black")+ ylab("Species richness") + xlab("Aridity Gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+# 
+# ## abundance
+# plot(mean.spp[mean.spp$Microsite=="open","arid.gradient"], mean.spp[mean.spp$Microsite=="open","abd"], ylab="average site abundance", xlab="aridity gradient")
+# points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],mean.spp[mean.spp$Microsite=="shrub","abd"], pch=19) 
+# 
+# m2 <- lm(abd~arid.gradient*Microsite, data=mean.spp)
+# summary(m2)
+# 
+# m2 <- lm(ihs(abd)~arid.gradient, data=mean.spp)
+# summary(m2)
+# 
+# ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(abd), fill=Microsite, color=Microsite), size=3)+ 
+#  scale_color_manual(values=c("#E69F00","#56B4E9"))  +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(abd)), color="black")+ ylab("Annual abundance") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+# 
+# 
+# 
+# ## biomass
+# plot(mean.spp[mean.spp$Microsite=="open","arid.gradient"], ihs(mean.spp[mean.spp$Microsite=="open","biomass"]), ylab="average site biomass", xlab="aridity gradient")
+# points(mean.spp[mean.spp$Microsite=="shrub","arid.gradient"],ihs(mean.spp[mean.spp$Microsite=="shrub","biomass"]), pch=19)
+# 
+# m3 <- lm(ihs(biomass)~arid.gradient*Microsite, data=mean.spp)
+# summary(m3)
+# 
+# ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(biomass), fill=Microsite, color=Microsite), size=3)+ 
+#  scale_color_manual(values=c("#E69F00","#56B4E9"))+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(biomass)), color="#56B4E9", data=subset(mean.spp, Microsite=="shrub"))  +  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(biomass)), data=subset(mean.spp, Microsite=="open"), color="#E69F00")+ ylab("Annual biomass") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
+# 
 
 ```
 
@@ -795,46 +799,46 @@ ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(biomass), fill=Microsi
 
 
 ### RDA community and environmental data
-```{r}
+```{r, echo=FALSE}
 
 community <- read.csv("Data/ERG.communitydata.csv")
 community[is.na(community)] <- 0
 
-##2016
-## add enviro data to dataframe
-comm2016 <- subset(community, Year==2016)
-site.vars2016[,"Site"] <- as.factor(row.names(site.vars2016))
-comm2016 <- merge(comm2016, site.vars2016, by="Site")
-
-## transform spp data
-community.trans <- decostand(comm2016[,13:53], "hellinger")
-
-rda1 <- rda(community.trans, comm2016[,54:57])
-(R2adj <- RsquareAdj(rda1)$adj.r.squared) ## 50.4% of variation explained
-
-
-## build byplot manually
-par(mar=c(4.5,4.5,0.5,0.5))
-plot(rda1, type="n", xlim=c(-1,1), ylim=c(-1.5,1.5))
-
-## calculate priority
-spp.priority <- colSums(comm2016[,13:53])
-
-## plot RDA1
-colvec <- rep(c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2"),each=60)
-points(rda1, display = "sites", col = "black", pch = c(21), bg = colvec)
-orditorp(rda1, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=0.5)
-text(rda1,  display = "bp", col = "blue", cex = 0.8) 
-legend("bottomright", pch=c(21), legend=unique(comm2016$Site), pt.bg=unique(colvec), cex=1)
-## ordikplot to adjust species locations
-
-## 2017
-## add enviro data to dataframe
-comm2017 <- subset(community, Year==2017)
-site.vars[,"Site"] <- as.factor(row.names(site.vars))
-comm2017 <- merge(comm2017, site.vars, by="Site")
+# ##2016
+# ## add enviro data to dataframe
+# comm2016 <- subset(community, Year==2016)
+# site.vars2016[,"Site"] <- as.factor(row.names(site.vars2016))
+# comm2016 <- merge(comm2016, site.vars2016, by="Site")
 # 
 # ## transform spp data
+# community.trans <- decostand(comm2016[,13:53], "hellinger")
+# 
+# rda1 <- rda(community.trans, comm2016[,54:57])
+# (R2adj <- RsquareAdj(rda1)$adj.r.squared) ## 50.4% of variation explained
+# 
+# 
+# ## build byplot manually
+# par(mar=c(4.5,4.5,0.5,0.5))
+# plot(rda1, type="n", xlim=c(-1,1), ylim=c(-1.5,1.5))
+# 
+# ## calculate priority
+# spp.priority <- colSums(comm2016[,13:53])
+# 
+# ## plot RDA1
+# colvec <- rep(c("blue","dodgerblue3","cyan","yellow2","orange","tomato","red2"),each=60)
+# points(rda1, display = "sites", col = "black", pch = c(21), bg = colvec)
+# orditorp(rda1, display = "species", cex = 0.7, col = "darkred", priority=spp.priority, air=0.5)
+# text(rda1,  display = "bp", col = "blue", cex = 0.8) 
+# legend("bottomright", pch=c(21), legend=unique(comm2016$Site), pt.bg=unique(colvec), cex=1)
+# ## ordikplot to adjust species locations
+# 
+# ## 2017
+# ## add enviro data to dataframe
+# comm2017 <- subset(community, Year==2017)
+# site.vars[,"Site"] <- as.factor(row.names(site.vars))
+# comm2017 <- merge(comm2017, site.vars, by="Site")
+# # 
+# # ## transform spp data
 # community.trans <- decostand(comm2017[,13:53], "hellinger")
 # 
 # rda2 <- rda(community.trans, comm2017[,54:58])
@@ -859,116 +863,116 @@ comm2017 <- merge(comm2017, site.vars, by="Site")
 ```
 
 ## Phytometer analysis
-```{r warning=FALSE, message=FALSE}
-
-census <- read.csv("Data/ERG.phytometer.census.csv")
-census[is.na(census)] <- 0
-census[,"phyto.abd"] <- rowSums(census[,c("Phacelia","Plantago","Salvia")])
-
-## calculate the number of seeds per gram
-seed.mass <- read.csv("Data/seed.mass.csv")
-seed.mass.avg <- seed.mass %>% group_by(species) %>%  summarize(avg.seed.gram=mean(seed.number),se.seed.gram=se(seed.number))
-seed.mass.avg <- data.frame(seed.mass.avg)
-seed.mass.avg
-
-## get proportion of seed germinated per 0.3 grams of seed
-census[,"Phacelia.prop"] <- census[,"Phacelia"]/(seed.mass.avg$avg.seed.gram[which(seed.mass.avg$species=="Phacelia")]*0.3)
-census[,"Plantago.prop"] <- census[,"Plantago"]/(seed.mass.avg$avg.seed.gram[which(seed.mass.avg$species=="Plantago")]*0.3)
-census[,"Salvia.prop"] <- census[,"Salvia"]/(seed.mass.avg$avg.seed.gram[which(seed.mass.avg$species=="Salvia")]*0.3)
-
-
-## beginning
-census.int <- subset(census, Census=="emergence")
-
-## all species
-m1 <- glm.nb(Phacelia~ Microsite * Nutrient * Site + Year, data=census.int)
-anova(m1, test="Chisq") ## Site * Micro and Year significant
-
-## Phacelia
-m1 <- glm.nb(Phacelia~ Microsite * Nutrient * Site + Year, data=census.int)
-anova(m1, test="Chisq") ## Site * Micro and Year significant
-## Plantago
-m2 <- glm.nb(Plantago~ Microsite * Nutrient * Site + Year, data=census.int)
-anova(m2, test="Chisq") ## Site * Micro and Year significant
-## Salvia
-m3 <- glm.nb(Salvia~ Microsite * Nutrient * Site + Year, data=census.int)
-anova(m3, test="Chisq") ## Site * Micro and Year significant + (micro x nutrient)
-
-census.int.plot <- gather(census.int, species, abundance, Phacelia:Salvia)
-
-##calculate confidence interval
-census.plot<- census.int.plot %>%  group_by(Microsite, species, Site, Year) %>%  summarize(avg=mean(abundance),ci=se(abundance)*1.96)
-
-ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
-  geom_bar(position=position_dodge(), stat="identity")+
-   geom_errorbar(aes(ymin=avg-ci, ymax=avg+ci),
-                  width=.2,                    # Width of the error bars
-                  position=position_dodge(.9))+ scale_fill_brewer() +ylab("Abundance")+ theme_Publication() + facet_grid(Year~Site) 
-
-## end season
-census.end <- subset(census, Census=="end")
-census.end[,"Year"] <- as.factor(census.end$Year)
-
-## run full model for phyto biomass
-m1 <- aov(log(phyto.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, phyto.biomass>0))
-summary(m1)
-TukeyHSD(m1, "Microsite")
-
-## all species end of season
-m2 <- glm.nb(phyto.abd~ Microsite * Nutrient * Site + Year, data=census.end)
-anova(m2, test="Chisq") ## Site and microsite*nutrient significant
-
-## run full model for phacelia biomass
-m3 <- aov(log(Phacelia.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Phacelia.biomass>0))
-summary(m3) ## site and microsite
-TukeyHSD(m3, "Microsite")
-
-
-## run full model for plantago biomass
-m4 <- aov(log(Plantago.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Plantago.biomass>0))
-summary(m4) ## site and year + sitexmicrosite
-TukeyHSD(m4, "Microsite")
-
-
-## run full model for plantago biomass
-m5 <- aov(log(Salvia.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Salvia.biomass>0))
-summary(m5) ## site and year + sitexmicrosite
-TukeyHSD(m5, "Microsite")
-
-## run full model for phacelia abundance
-m6 <- glm.nb(Phacelia.biomass~ Site * Microsite * Nutrient + Year, data=subset(census.end, Phacelia>0))
-summary(m3) ## site and microsite
-TukeyHSD(m3, "Microsite")
-
-
-## run full model for plantago biomass
-m7 <- aov(log(Plantago)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Plantago>0))
-summary(m4) ## site and year + sitexmicrosite
-TukeyHSD(m4, "Microsite")
-
-
-## run full model for plantago biomass
-m8 <- aov(log(Salvia)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Salvia>0))
-summary(m5) ## site and year + sitexmicrosite
-TukeyHSD(m5, "Microsite")
-
-
-census.end.plot <- gather(census.end, species, biomass, Phacelia.biomass:Salvia.biomass)
-
-##calculate confidence interval
-census.plot<- census.end.plot %>%  group_by(Microsite, species, Site, Year) %>%  summarize(avg=mean(biomass),ci=se(biomass)*1.96)
-
-ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
-  geom_bar(position=position_dodge(), stat="identity")+
-   geom_errorbar(aes(ymin=avg-ci, ymax=avg+ci),
-                  width=.2,                    # Width of the error bars
-                  position=position_dodge(.9))+ scale_fill_brewer() +ylab("Abundance")+ theme_Publication() + facet_grid(Year~Site) 
-
+```{r warning=FALSE, message=FALSE, echo=FALSE}
+# 
+# census <- read.csv("Data/ERG.phytometer.census.csv")
+# census[is.na(census)] <- 0
+# census[,"phyto.abd"] <- rowSums(census[,c("Phacelia","Plantago","Salvia")])
+# 
+# ## calculate the number of seeds per gram
+# seed.mass <- read.csv("Data/seed.mass.csv")
+# seed.mass.avg <- seed.mass %>% group_by(species) %>%  summarize(avg.seed.gram=mean(seed.number),se.seed.gram=se(seed.number))
+# seed.mass.avg <- data.frame(seed.mass.avg)
+# seed.mass.avg
+# 
+# ## get proportion of seed germinated per 0.3 grams of seed
+# census[,"Phacelia.prop"] <- census[,"Phacelia"]/(seed.mass.avg$avg.seed.gram[which(seed.mass.avg$species=="Phacelia")]*0.3)
+# census[,"Plantago.prop"] <- census[,"Plantago"]/(seed.mass.avg$avg.seed.gram[which(seed.mass.avg$species=="Plantago")]*0.3)
+# census[,"Salvia.prop"] <- census[,"Salvia"]/(seed.mass.avg$avg.seed.gram[which(seed.mass.avg$species=="Salvia")]*0.3)
+# 
+# 
+# ## beginning
+# census.int <- subset(census, Census=="emergence")
+# 
+# ## all species
+# m1 <- glm.nb(Phacelia~ Microsite * Nutrient * Site + Year, data=census.int)
+# anova(m1, test="Chisq") ## Site * Micro and Year significant
+# 
+# ## Phacelia
+# m1 <- glm.nb(Phacelia~ Microsite * Nutrient * Site + Year, data=census.int)
+# anova(m1, test="Chisq") ## Site * Micro and Year significant
+# ## Plantago
+# m2 <- glm.nb(Plantago~ Microsite * Nutrient * Site + Year, data=census.int)
+# anova(m2, test="Chisq") ## Site * Micro and Year significant
+# ## Salvia
+# m3 <- glm.nb(Salvia~ Microsite * Nutrient * Site + Year, data=census.int)
+# anova(m3, test="Chisq") ## Site * Micro and Year significant + (micro x nutrient)
+# 
+# census.int.plot <- gather(census.int, species, abundance, Phacelia:Salvia)
+# 
+# ##calculate confidence interval
+# census.plot<- census.int.plot %>%  group_by(Microsite, species, Site, Year) %>%  summarize(avg=mean(abundance),ci=se(abundance)*1.96)
+# 
+# ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
+#   geom_bar(position=position_dodge(), stat="identity")+
+#    geom_errorbar(aes(ymin=avg-ci, ymax=avg+ci),
+#                   width=.2,                    # Width of the error bars
+#                   position=position_dodge(.9))+ scale_fill_brewer() +ylab("Abundance")+ theme_Publication() + facet_grid(Year~Site) 
+# 
+# ## end season
+# census.end <- subset(census, Census=="end")
+# census.end[,"Year"] <- as.factor(census.end$Year)
+# 
+# ## run full model for phyto biomass
+# m1 <- aov(log(phyto.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, phyto.biomass>0))
+# summary(m1)
+# TukeyHSD(m1, "Microsite")
+# 
+# ## all species end of season
+# m2 <- glm.nb(phyto.abd~ Microsite * Nutrient * Site + Year, data=census.end)
+# anova(m2, test="Chisq") ## Site and microsite*nutrient significant
+# 
+# ## run full model for phacelia biomass
+# m3 <- aov(log(Phacelia.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Phacelia.biomass>0))
+# summary(m3) ## site and microsite
+# TukeyHSD(m3, "Microsite")
+# 
+# 
+# ## run full model for plantago biomass
+# m4 <- aov(log(Plantago.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Plantago.biomass>0))
+# summary(m4) ## site and year + sitexmicrosite
+# TukeyHSD(m4, "Microsite")
+# 
+# 
+# ## run full model for plantago biomass
+# m5 <- aov(log(Salvia.biomass)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Salvia.biomass>0))
+# summary(m5) ## site and year + sitexmicrosite
+# TukeyHSD(m5, "Microsite")
+# 
+# ## run full model for phacelia abundance
+# m6 <- glm.nb(Phacelia.biomass~ Site * Microsite * Nutrient + Year, data=subset(census.end, Phacelia>0))
+# summary(m3) ## site and microsite
+# TukeyHSD(m3, "Microsite")
+# 
+# 
+# ## run full model for plantago biomass
+# m7 <- aov(log(Plantago)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Plantago>0))
+# summary(m4) ## site and year + sitexmicrosite
+# TukeyHSD(m4, "Microsite")
+# 
+# 
+# ## run full model for plantago biomass
+# m8 <- aov(log(Salvia)~ Site * Microsite * Nutrient + Year, data=subset(census.end, Salvia>0))
+# summary(m5) ## site and year + sitexmicrosite
+# TukeyHSD(m5, "Microsite")
+# 
+# 
+# census.end.plot <- gather(census.end, species, biomass, Phacelia.biomass:Salvia.biomass)
+# 
+# ##calculate confidence interval
+# census.plot<- census.end.plot %>%  group_by(Microsite, species, Site, Year) %>%  summarize(avg=mean(biomass),ci=se(biomass)*1.96)
+# 
+# ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
+#   geom_bar(position=position_dodge(), stat="identity")+
+#    geom_errorbar(aes(ymin=avg-ci, ymax=avg+ci),
+#                   width=.2,                    # Width of the error bars
+#                   position=position_dodge(.9))+ scale_fill_brewer() +ylab("Abundance")+ theme_Publication() + facet_grid(Year~Site) 
+# 
 
 ```
 
 
-```{r}
+```{r echo=FALSE}
 ### RDA
 # 
 # ##collect environmental variables for site
@@ -1033,60 +1037,60 @@ ggplot(census.plot, aes(x=Microsite, y=avg, fill=species))+
 
 ### Difference in effect size
 
-```{r warning=FALSE, fig.width=9}
-
-library(bootES)
-
-effect.cal <- function(x){ bootES(x, R=999, data.col="Biomass", group.col="Microsite", contrast=c(shrub=1,open=-1), effect.type=c("cohens.d"))}
-
-effect.site <- by(subset(comm2016, Site != "Barstow"), comm2016$Site[comm2016$Site != "Barstow"], FUN=effect.cal)
-
-site.summary <- rbind(summary(effect.site$Panoche),summary(effect.site$Cuyama),summary(effect.site$TejonRanch),data.frame(stat=0,ci.low=0,ci.high=0,bias=0,std.error=0),summary(effect.site$MojavePreserve),summary(effect.site$SheepholeValley),summary(effect.site$Tecopa)) 
-site.summary[5,] <- 0
-site.summary <- sapply(site.summary, as.numeric)
-
-par(mar=c(4.5,4.5,.5,.5))
-plot(c(1:7),site.summary[,"stat"], xlim=c(0.5,7.5), ylim=c(-1,3), pch=19, cex=1.4, ylab="Hedge's G", xlab="", xaxt="n")
-arrows(c(1:7),as.numeric(site.summary[,"ci.high"]),c(1:7),site.summary[,"ci.low"], angle=90, code=3, length=0, lwd=2)
-abline(h=0, lty=2, lwd=2)
-axis(1, c(1:7), labels=site.names, cex.axis=1)
-
-## phytometer
-
-effect.cal <- function(x){ bootES(x, R=999, data.col="phyto.biomass", group.col="Microsite", contrast=c(shrub=1,open=-1), effect.type=c("cohens.d"))}
-
-census2016 <- subset(census, Census=="end" & Year ==2016)
-
-effect.site <- by(subset(census2016, Site != "Barstow"), census2016$Site[census2016$Site != "Barstow"], FUN=effect.cal)
-
-site.summary <- rbind(summary(effect.site$Panoche),summary(effect.site$Cuyama),summary(effect.site$TejonRanch),data.frame(stat=0,ci.low=0,ci.high=0,bias=0,std.error=0),summary(effect.site$MojavePreserve),summary(effect.site$SheepholeValley),summary(effect.site$Tecopa)) 
-site.summary <- sapply(site.summary, as.numeric)
-
-par(mar=c(4.5,4.5,.5,.5))
-plot(c(1:7),site.summary[,"stat"], xlim=c(0.5,7.5), ylim=c(-1,3), pch=19, cex=1.4, ylab="Hedge's G", xlab="", xaxt="n")
-arrows(c(1:7),site.summary[,"ci.high"],c(1:7),site.summary[,"ci.low"], angle=90, code=3, length=0, lwd=2)
-abline(h=0, lty=2, lwd=2)
-axis(1, c(1:7), labels=site.names, cex.axis=1)
+```{r warning=FALSE, fig.width=9, echp=FALSE}
+# 
+# library(bootES)
+# 
+# effect.cal <- function(x){ bootES(x, R=999, data.col="Biomass", group.col="Microsite", contrast=c(shrub=1,open=-1), effect.type=c("cohens.d"))}
+# 
+# effect.site <- by(subset(comm2016, Site != "Barstow"), comm2016$Site[comm2016$Site != "Barstow"], FUN=effect.cal)
+# 
+# site.summary <- rbind(summary(effect.site$Panoche),summary(effect.site$Cuyama),summary(effect.site$TejonRanch),data.frame(stat=0,ci.low=0,ci.high=0,bias=0,std.error=0),summary(effect.site$MojavePreserve),summary(effect.site$SheepholeValley),summary(effect.site$Tecopa)) 
+# site.summary[5,] <- 0
+# site.summary <- sapply(site.summary, as.numeric)
+# 
+# par(mar=c(4.5,4.5,.5,.5))
+# plot(c(1:7),site.summary[,"stat"], xlim=c(0.5,7.5), ylim=c(-1,3), pch=19, cex=1.4, ylab="Hedge's G", xlab="", xaxt="n")
+# arrows(c(1:7),as.numeric(site.summary[,"ci.high"]),c(1:7),site.summary[,"ci.low"], angle=90, code=3, length=0, lwd=2)
+# abline(h=0, lty=2, lwd=2)
+# axis(1, c(1:7), labels=site.names, cex.axis=1)
+# 
+# ## phytometer
+# 
+# effect.cal <- function(x){ bootES(x, R=999, data.col="phyto.biomass", group.col="Microsite", contrast=c(shrub=1,open=-1), effect.type=c("cohens.d"))}
+# 
+# census2016 <- subset(census, Census=="end" & Year ==2016)
+# 
+# effect.site <- by(subset(census2016, Site != "Barstow"), census2016$Site[census2016$Site != "Barstow"], FUN=effect.cal)
+# 
+# site.summary <- rbind(summary(effect.site$Panoche),summary(effect.site$Cuyama),summary(effect.site$TejonRanch),data.frame(stat=0,ci.low=0,ci.high=0,bias=0,std.error=0),summary(effect.site$MojavePreserve),summary(effect.site$SheepholeValley),summary(effect.site$Tecopa)) 
+# site.summary <- sapply(site.summary, as.numeric)
+# 
+# par(mar=c(4.5,4.5,.5,.5))
+# plot(c(1:7),site.summary[,"stat"], xlim=c(0.5,7.5), ylim=c(-1,3), pch=19, cex=1.4, ylab="Hedge's G", xlab="", xaxt="n")
+# arrows(c(1:7),site.summary[,"ci.high"],c(1:7),site.summary[,"ci.low"], angle=90, code=3, length=0, lwd=2)
+# abline(h=0, lty=2, lwd=2)
+# axis(1, c(1:7), labels=site.names, cex.axis=1)
 ```
 
 ### Rii between years
-```{r, fig.width=10, fig.height=8}
-rii.dat <- rii(community, j=1:8, var=c("Abundance","Richness","Biomass"))
-
-rii.mean <- rii.dat %>% group_by(Year, Gradient, Site) %>% summarize(avg=mean(Biomass),se=se(Biomass))
-rii.mean <- data.frame(rii.mean)
-
-plot(rii.mean[rii.mean$Year==2016,"Gradient"]-.1,rii.mean[rii.mean$Year==2016,"avg"], ylim=c(-1,1), pch=19, cex=1.5, xlim=c(0.5,7.5), ylab="Rii Biomass", xlab="Site", xaxt="n", cex.lab=1.5)
-axis(1, 1:7, lab=unique(rii.mean$Site))
-error.bar(rii.mean[rii.mean$Year==2016,"Gradient"]-.1,rii.mean[rii.mean$Year==2016,"avg"],rii.mean[rii.mean$Year==2016,"se"])
-error.bar(rii.mean[rii.mean$Year==2017,"Gradient"]+.1,rii.mean[rii.mean$Year==2017,"avg"],rii.mean[rii.mean$Year==2017,"se"])
-points(rii.mean[rii.mean$Year==2017,"Gradient"]+.1,rii.mean[rii.mean$Year==2017,"avg"], pch=21, bg="Grey50", cex=1.5)
-abline(h=0, lwd=2, lty=2)
-legend(6.3,-0.55, c("2016","2017"), pch=22, pt.bg=c("Black","Grey50"), cex=1.6)
-
-## add year column to precipitation data
-precip[,"Year"] <- ifelse(precip$season=="season.1","2016","2017")
-rii.precip <- merge(precip,rii.mean, by=c("Year","Gradient"))
+```{r, fig.width=10, fig.height=8, echo=FALSE}
+# rii.dat <- rii(community, j=1:8, var=c("Abundance","Richness","Biomass"))
+# 
+# rii.mean <- rii.dat %>% group_by(Year, Gradient, Site) %>% summarize(avg=mean(Biomass),se=se(Biomass))
+# rii.mean <- data.frame(rii.mean)
+# 
+# plot(rii.mean[rii.mean$Year==2016,"Gradient"]-.1,rii.mean[rii.mean$Year==2016,"avg"], ylim=c(-1,1), pch=19, cex=1.5, xlim=c(0.5,7.5), ylab="Rii Biomass", xlab="Site", xaxt="n", cex.lab=1.5)
+# axis(1, 1:7, lab=unique(rii.mean$Site))
+# error.bar(rii.mean[rii.mean$Year==2016,"Gradient"]-.1,rii.mean[rii.mean$Year==2016,"avg"],rii.mean[rii.mean$Year==2016,"se"])
+# error.bar(rii.mean[rii.mean$Year==2017,"Gradient"]+.1,rii.mean[rii.mean$Year==2017,"avg"],rii.mean[rii.mean$Year==2017,"se"])
+# points(rii.mean[rii.mean$Year==2017,"Gradient"]+.1,rii.mean[rii.mean$Year==2017,"avg"], pch=21, bg="Grey50", cex=1.5)
+# abline(h=0, lwd=2, lty=2)
+# legend(6.3,-0.55, c("2016","2017"), pch=22, pt.bg=c("Black","Grey50"), cex=1.6)
+# 
+# ## add year column to precipitation data
+# precip[,"Year"] <- ifelse(precip$season=="season.1","2016","2017")
+# rii.precip <- merge(precip,rii.mean, by=c("Year","Gradient"))
 ```
 
 
@@ -1389,7 +1393,11 @@ anova(m1)
 ```{r}
 library(lsmeans)
 
+census[is.na(census)] <- 0
+census[,"phyto.abd"] <- rowSums(census[,c("Phacelia","Plantago","Salvia")])
 
+census.end <- subset(census, Census=="end")
+census.end[,"Year"] <- as.factor(census.end$Year)
 census.arid <- merge(census.end, site.climate, by=c("Year","Site"))
 
 
@@ -1467,10 +1475,85 @@ ggplot(census.nut, aes(x=species, y=Biomass, fill=Nutrient)) +   geom_bar(positi
 ggplot(census.long, aes(x=arid.gradient, y=biomass, fill=species, colour=species)) + theme_Publication()+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#E69F00",fill="#E69F0040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#56B4E9", fill="#56B4E940", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
 
 
+m1 <- lmer(log(Phacelia.biomass)~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=subset(census.arid, Phacelia.biomass>0))
+shapiro.test(resid(m1))
+anova(m1)
+r.squaredGLMM(m1) ## R squared values 
+
+
+m2 <- lmer(log(Plantago.biomass)~Microsite * arid.gradient * Nutrient + (1|Year), data=subset(census.arid, Plantago.biomass>0))
+shapiro.test(resid(m2))
+anova(m2)
+r.squaredGLMM(m2) ## R squared values 
+
+
+m3 <- lmer(log(Salvia.biomass)~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=subset(census.arid, Salvia.biomass>0))
+shapiro.test(resid(m3))
+anova(m3)
+r.squaredGLMM(m3) ## R squared values 
+
+## to check for overdispersion
+overdisp_fun <- function(model) {
+  ## number of variance parameters in 
+  ##   an n-by-n variance-covariance matrix
+  vpars <- function(m) {
+    nrow(m)*(nrow(m)+1)/2
+  }
+  model.df <- sum(sapply(VarCorr(model),vpars))+length(fixef(model))
+  (rdf <- nrow(model@frame)-model.df)
+  rp <- residuals(model)
+  Pearson.chisq <- sum(rp^2)
+  prat <- Pearson.chisq/rdf
+  pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE,log.p=TRUE)
+  c(chisq=Pearson.chisq,ratio=prat,p=exp(pval))
+}
+
+
+## related packages
+library(car)
+library(lme4)
+
+
+## https://www.rdocumentation.org/packages/lme4/versions/1.1-15/topics/pvalues 
+## https://arxiv.org/pdf/1406.5823.pdf
+## Calculating Pvalues from glmer
+
+# ##Provides parametric bootstrapping methods for model comparisons
+# library(afex)
+# mixed(Phacelia~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=census.arid, family=poisson, control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=100000)), method="LRT")
+
+
+## accounting for overdispersion in GLMM
+## Harrison, X. A. (2014). Using observation-level random effects to model overdispersion in count data in ecology and evolution. PeerJ, 2, e616.
+m4 <- glmer(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year), data=census.arid, family=poisson)
+#car::Anova(m4, test.statistics="LR", type=c("III")) 
+overdisp_fun(m4)  ## over dispersion?
+
+
+## re-run with observational-level random effects
+disp<-seq(nrow(census.arid))
+m4 <- glmer(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year) + (1|disp), data=census.arid, family=poisson)
+car::Anova(m4, test.statistics="LR", type=c("III")) 
+  
+m5 <- glmer(Plantago~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=census.arid, family=poisson)
+overdisp_fun(m5)  ## over dispersion?
+
+## re-run with observational-level random effects
+m5 <- glmer(Plantago~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year)+ (1|disp), data=census.arid, family=poisson)
+car::Anova(m5, test.statistics="LR", type=c("III"))
+
+m6 <- glmer(Salvia~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=census.arid, family=poisson)
+overdisp_fun(m6)  ## over dispersion?
+
+
+## re-run with observational-level random effects
+m6 <- glmer(Salvia~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year)+ (1|disp), data=census.arid, family=poisson)
+car::Anova(m6, test.statistics="LR", type=c("III"))
+
 ```
 
 ### Community analysis
-```{r warning=FALSE, message=FALSE}
+```{r warning=FALSE, message=FALSE, eval=FALSE}
 
 ## Regressions To Separate Phylogenetic Attraction And Repulsion
 
@@ -1534,9 +1617,10 @@ plot(n.open, layout=layout_on_grid(n.open),vertex.shape=c("circle", "square")[sh
 transitivity(n.open, type = "local") 
 transitivity(n.open, type = "global") 
 
-
+```
 
 ### indicator species analysis
+```{r warning=FALSE, message=FALSE}
 library(indicspecies)
 
 ## indicator species analysis
@@ -1751,10 +1835,8 @@ plot(ord.env)
 
 community.arid <- merge(community, site.climate, by=c("Year","Site"))
 
-library(lmerTest) ## approximations for tests
-library(MuMIn) ## calculates R squared
 
-
+### Ambient
 mean.year <- community.arid %>% group_by(Microsite, arid.gradient, Year) %>%  summarize(abd=mean(Abundance),rich=mean(Richness), bio=mean(Biomass))
 
 m1 <- lmer(ihs(bio)~Microsite * poly(arid.gradient,3) + (1|Year), data=mean.year)
@@ -1865,3 +1947,40 @@ grid.arrange(p5,p8,p6,p7)
 ```
 
 
+### Microsite comparisons
+```{r}
+nut <- read.csv("Data//ERG.soilnutrients.csv")
+
+fit1 <- aovp(N ~ microsite, data=nut)
+summary(fit1)
+t.test(N ~ microsite, data=nut)
+fit2 <- aovp(P ~ microsite, data=nut)
+t.test(P ~ microsite, data=nut)
+summary(fit2)
+fit3 <- aovp(K ~ microsite, data=nut)
+t.test(K ~ microsite, data=nut)
+summary(fit3)
+
+compact <- read.csv("Data//ERG.shrub.csv")
+
+fit4 <- aovp(Compaction ~ Microsite, data=compact)
+t.test(Compaction ~ Microsite, data=compact)
+summary(fit4)
+
+soilmoist <- read.csv("Data//ERG.phytometer.census.csv")
+
+fit5 <- aovp(swc ~ Microsite, data=subset(soilmoist, Census=="emergence"))
+summary(fit5)
+t.test(swc ~ Microsite, data=subset(soilmoist, Census=="emergence"))
+
+micro <- read.csv("Data//ERG.logger.data.csv")
+
+micro.avg <- micro %>% group_by(Year, Site, Microsite, Rep) %>% summarize(temp=mean(Temp), rh=mean(RH))
+
+fit6 <- aovp(temp ~ Microsite, data=micro.avg)
+summary(fit6)
+t.test(temp ~ Microsite, data=micro.avg)
+
+fit7 <- aovp(rh ~ Microsite, data=micro.avg)
+summary(fit7)
+t.test(rh ~ Microsite, data=micro.avg)
