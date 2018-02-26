@@ -1737,7 +1737,7 @@ plot(ord.env)
 
 ### Short-term vs long-term effects
 
-![Repeated of analyses separating long- and short- term effects]("./longshort.effects.html")
+![Repeated of analyses separating long- and short- term effects](https://raw.githubusercontent.com/afilazzola/ERG_2016-2017/gh-pages/longshort.effects.html?token=AJv8-SViwLBPU-BfsqECr4PoDYvwPz1jks5ahO7SwA%3D%3D)
 
 
 ### Mixed model resuilts
