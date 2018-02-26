@@ -17,7 +17,7 @@ theme_Publication <- function(base_size=14, base_family="helvetica") {
             panel.grid.major = element_blank(),
             panel.grid.minor = element_blank(),
             legend.key = element_rect(colour = NA),
-            legend.position = "bottom",
+            legend.position = "top",
             legend.direction = "horizontal",
             legend.key.size= unit(0.2, "cm"),
             legend.margin = unit(0, "cm"),
