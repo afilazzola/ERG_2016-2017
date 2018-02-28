@@ -1490,7 +1490,7 @@ shapiro.test(resid(m1))
 anova(m1)
 r.squaredGLMM(m1) ## R squared values 
 
-m2.l <- glmer(presence~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. insularis"), family=poisson)
+m2.l <- glmer(presence~Microsite * arid.gradient * Nutrient + (1|Year),data=subset(census.long, species=="P. insularis"), family=binomial)
 car::Anova(m2.l)
 
 m2 <- lmer(log(Plantago.biomass)~Microsite * arid.gradient * Nutrient + (1|Year), data=subset(census.arid, Plantago.biomass>0))
@@ -1498,44 +1498,63 @@ shapiro.test(resid(m2))
 anova(m2)
 r.squaredGLMM(m2) ## R squared values 
 
+m3.l <- glmer(presence~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year),data=subset(census.long, species=="S. columbariae"), family=binomial)
+car::Anova(m3.l)
 
 m3 <- lmer(log(Salvia.biomass)~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=subset(census.arid, Salvia.biomass>0))
 shapiro.test(resid(m3))
 anova(m3)
 r.squaredGLMM(m3) ## R squared values 
 
+
+## set up prediction dataset
 library(effects)
-epha <- as.data.frame(Effect(c("arid.gradient","Microsite"),m1))
-epla <- as.data.frame(Effect(c("arid.gradient","Microsite"),m2))
-esal <- as.data.frame(Effect(c("arid.gradient","Microsite"),m3))
+epha <- as.data.frame(Effect(c("arid.gradient"),m1.l))
+epla <- as.data.frame(Effect(c("arid.gradient"),m2.l))
+esal <- as.data.frame(Effect(c("arid.gradient"),m3.l))
 ee <- rbind(epha,epla, esal)
-ee[,"species"] <- rep(c("phacelia","plantago","salvia"),each=5)
+ee[,"species"] <- rep(unique(census.long$species),each=5)
+
+
+ggplot(data=ee, aes(arid.gradient,fit,color=species))+geom_line(lwd=1.4) +xlab("aridity gradient") + ylab("probability of occurrence") + theme_Publication() +  geom_ribbon(aes(ymin=lower, ymax=upper, fill=species),  alpha=0.5)
+
+
+## Calculate effects size estimates for regressions
+library(effects)
+epha <- as.data.frame(Effect(c("arid.gradient"),m1))
+epla <- as.data.frame(Effect(c("arid.gradient"),m2))
+esal <- as.data.frame(Effect(c("arid.gradient"),m3))
+ee <- rbind(epha,epla, esal)
+ee[,"species"] <- rep(unique(census.long$species),each=5)
 #ee[,2:5] <- exp(ee[,2:5])
 
+## add colours for species
+color.add<- subset(census.long, biomass>0)
+color.add$color <- ifelse(color.add$species=="P. tanacetifolia", "#009E73",ifelse(color.add$species=="P. insularis", "#D55E00","#0072B2"))
 
-ggplot()+ geom_jitter(aes(x=arid.gradient, y=log(biomass), fill=species, colour=species),alpha=0.6, width = 0.05, data=subset(census.long, biomass>0)) +geom_line(data=ee, aes(arid.gradient,fit,colour=species,fill=species),lwd=1.4)
-
-
-## to check for overdispersion
-overdisp_fun <- function(model) {
-  ## number of variance parameters in 
-  ##   an n-by-n variance-covariance matrix
-  vpars <- function(m) {
-    nrow(m)*(nrow(m)+1)/2
-  }
-  model.df <- sum(sapply(VarCorr(model),vpars))+length(fixef(model))
-  (rdf <- nrow(model@frame)-model.df)
-  rp <- residuals(model)
-  Pearson.chisq <- sum(rp^2)
-  prat <- Pearson.chisq/rdf
-  pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE,log.p=TRUE)
-  c(chisq=Pearson.chisq,ratio=prat,p=exp(pval))
-}
+ggplot()+ geom_jitter(aes(x=arid.gradient, y=log(biomass), group=species), color=color.add$color,alpha=0.4, width = 0.05, data=subset(census.long, biomass>0)) +geom_line(data=ee, aes(arid.gradient,fit,color=species),lwd=1.4) +xlab("aridity gradient") + ylab("log-transformed biomass") + theme_Publication()
+                                                                                                                          
+# 
+# ## to check for overdispersion
+# overdisp_fun <- function(model) {
+#   ## number of variance parameters in 
+#   ##   an n-by-n variance-covariance matrix
+#   vpars <- function(m) {
+#     nrow(m)*(nrow(m)+1)/2
+#   }
+#   model.df <- sum(sapply(VarCorr(model),vpars))+length(fixef(model))
+#   (rdf <- nrow(model@frame)-model.df)
+#   rp <- residuals(model)
+#   Pearson.chisq <- sum(rp^2)
+#   prat <- Pearson.chisq/rdf
+#   pval <- pchisq(Pearson.chisq, df=rdf, lower.tail=FALSE,log.p=TRUE)
+#   c(chisq=Pearson.chisq,ratio=prat,p=exp(pval))
+# }
 
 
 ## related packages
-library(car)
-library(lme4)
+# library(car)
+# library(lme4)
 
 
 ## https://www.rdocumentation.org/packages/lme4/versions/1.1-15/topics/pvalues 
@@ -1547,35 +1566,35 @@ library(lme4)
 # mixed(Phacelia~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=census.arid, family=poisson, control=glmerControl(optimizer="bobyqa",optCtrl=list(maxfun=100000)), method="LRT")
 
 
-## accounting for overdispersion in GLMM
-## Harrison, X. A. (2014). Using observation-level random effects to model overdispersion in count data in ecology and evolution. PeerJ, 2, e616.
-m4 <- glmer(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year), data=census.arid, family=poisson)
-#car::Anova(m4, test.statistics="LR", type=c("III")) 
-overdisp_fun(m4)  ## over dispersion?
-
-
-## re-run with observational-level random effects
-disp<-seq(nrow(census.arid))
-m4 <- glmer(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year) + (1|disp), data=census.arid, family=poisson)
-car::Anova(m4, test.statistics="LR", type=c("III")) 
-
-m4 <- glmer.nb(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year), data=census.arid)
-car::Anova(m4, test.statistics="LR", type=c("III")) 
-
-m5 <- glmer(Plantago~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=census.arid, family=poisson)
-overdisp_fun(m5)  ## over dispersion?
-
-## re-run with observational-level random effects
-m5 <- glmer(Plantago~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year)+ (1|disp), data=census.arid, family=poisson)
-car::Anova(m5, test.statistics="LR", type=c("III"))
-
-m6 <- glmer(Salvia~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=census.arid, family=poisson)
-overdisp_fun(m6)  ## over dispersion?
-
-
-## re-run with observational-level random effects
-m6 <- glmer(Salvia~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year)+ (1|disp), data=census.arid, family=poisson)
-car::Anova(m6, test.statistics="LR", type=c("III"))
+# ## accounting for overdispersion in GLMM
+# ## Harrison, X. A. (2014). Using observation-level random effects to model overdispersion in count data in ecology and evolution. PeerJ, 2, e616.
+# m4 <- glmer(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year), data=census.arid, family=poisson)
+# #car::Anova(m4, test.statistics="LR", type=c("III")) 
+# overdisp_fun(m4)  ## over dispersion?
+# 
+# 
+# ## re-run with observational-level random effects
+# disp<-seq(nrow(census.arid))
+# m4 <- glmer(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year) + (1|disp), data=census.arid, family=poisson)
+# car::Anova(m4, test.statistics="LR", type=c("III")) 
+# 
+# m4 <- glmer.nb(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year), data=census.arid)
+# car::Anova(m4, test.statistics="LR", type=c("III")) 
+# 
+# m5 <- glmer(Plantago~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=census.arid, family=poisson)
+# overdisp_fun(m5)  ## over dispersion?
+# 
+# ## re-run with observational-level random effects
+# m5 <- glmer(Plantago~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year)+ (1|disp), data=census.arid, family=poisson)
+# car::Anova(m5, test.statistics="LR", type=c("III"))
+# 
+# m6 <- glmer(Salvia~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=census.arid, family=poisson)
+# overdisp_fun(m6)  ## over dispersion?
+# 
+# 
+# ## re-run with observational-level random effects
+# m6 <- glmer(Salvia~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year)+ (1|disp), data=census.arid, family=poisson)
+# car::Anova(m6, test.statistics="LR", type=c("III"))
 
 ```
 
