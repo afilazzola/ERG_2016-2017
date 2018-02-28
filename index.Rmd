@@ -1472,14 +1472,26 @@ ggplot(census.nut, aes(x=species, y=Biomass, fill=Nutrient)) +   geom_bar(positi
 
 ## aridity average
 
-ggplot(census.long, aes(x=arid.gradient, y=biomass, fill=species, colour=species)) + theme_Publication()+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#E69F00",fill="#E69F0040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#56B4E9", fill="#56B4E940", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
+ggplot(census.long, aes(x=arid.gradient, y=biomass, fill=species, colour=species)) + theme_Publication()+   stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#E69F00",fill="#E69F0040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#56B4E9", fill="#56B4E940", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
+
+### need to separate zeros using gamma-hurdle model
+##http://seananderson.ca/2014/05/18/gamma-hurdle.html
 
 
-m1 <- lmer(log(Phacelia.biomass)~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=subset(census.arid, Phacelia.biomass>0))
+## logistic first
+census.long[,"presence"] <- ifelse(census.long$biomass>0,1,0)
+
+m1.l <- glmer(presence~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. tanacetifolia"), family=binomial)
+car::Anova(m1.l)
+
+
+m1 <- lmer(log(biomass)~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. tanacetifolia" & presence==1))
 shapiro.test(resid(m1))
 anova(m1)
 r.squaredGLMM(m1) ## R squared values 
 
+m2.l <- glmer(presence~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. insularis"), family=poisson)
+car::Anova(m2.l)
 
 m2 <- lmer(log(Plantago.biomass)~Microsite * arid.gradient * Nutrient + (1|Year), data=subset(census.arid, Plantago.biomass>0))
 shapiro.test(resid(m2))
@@ -1491,6 +1503,18 @@ m3 <- lmer(log(Salvia.biomass)~Microsite * poly(arid.gradient,2) * Nutrient + (1
 shapiro.test(resid(m3))
 anova(m3)
 r.squaredGLMM(m3) ## R squared values 
+
+library(effects)
+epha <- as.data.frame(Effect(c("arid.gradient","Microsite"),m1))
+epla <- as.data.frame(Effect(c("arid.gradient","Microsite"),m2))
+esal <- as.data.frame(Effect(c("arid.gradient","Microsite"),m3))
+ee <- rbind(epha,epla, esal)
+ee[,"species"] <- rep(c("phacelia","plantago","salvia"),each=5)
+#ee[,2:5] <- exp(ee[,2:5])
+
+
+ggplot()+ geom_jitter(aes(x=arid.gradient, y=log(biomass), fill=species, colour=species),alpha=0.6, width = 0.05, data=subset(census.long, biomass>0)) +geom_line(data=ee, aes(arid.gradient,fit,colour=species,fill=species),lwd=1.4)
+
 
 ## to check for overdispersion
 overdisp_fun <- function(model) {
@@ -1534,7 +1558,10 @@ overdisp_fun(m4)  ## over dispersion?
 disp<-seq(nrow(census.arid))
 m4 <- glmer(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year) + (1|disp), data=census.arid, family=poisson)
 car::Anova(m4, test.statistics="LR", type=c("III")) 
-  
+
+m4 <- glmer.nb(Phacelia~Microsite * arid.gradient * Nutrient + (1|Year), data=census.arid)
+car::Anova(m4, test.statistics="LR", type=c("III")) 
+
 m5 <- glmer(Plantago~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=census.arid, family=poisson)
 overdisp_fun(m5)  ## over dispersion?
 
