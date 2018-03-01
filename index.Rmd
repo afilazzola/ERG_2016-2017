@@ -1142,6 +1142,16 @@ summary(m1)
 ggplot(mean.spp) + geom_jitter(aes(x=arid.gradient, y=ihs(non.native), fill=Microsite, color=Microsite), size=3)+ 
  scale_color_manual(values=c("#E69F00","#56B4E9"))+  stat_smooth(method="lm", formula= y~x,aes(x=arid.gradient, y=ihs(non.native)), color="black")+ ylab("Non-native abundance") + xlab("aridity gradient")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) 
 
+## mixed models
+m1 <- lmer(ihs(non.native) ~ arid.gradient*Microsite + (1|Year), data=mean.spp)
+shapiro.test(resid(m1))
+anova(m1)
+r.squaredGLMM(m1) ## R squared values 
+
+m2 <- lmer(ihs(native) ~ poly(arid.gradient,2)*Microsite + (1|Year), data=mean.spp)
+shapiro.test(resid(m2))
+anova(m2)
+r.squaredGLMM(m2) ## R squared values 
 
 
 ```
@@ -1464,11 +1474,11 @@ ggplot(census.micro, aes(x=species, y=Biomass, fill=Microsite)) +   geom_bar(pos
                   position=position_dodge(.9))+ theme_Publication() + theme(axis.text.x = element_text(size=12, face="italic"))
 
 ## nutrient average
-census.nut <- census.long %>% filter(biomass>0) %>%  group_by(Nutrient, species) %>%  summarize(Biomass=mean(biomass), error=se(biomass))
+census.nut <- census.long %>% filter(biomass>0) %>%  group_by(Nutrient, species, Year) %>%  summarize(Biomass=mean(biomass), error=se(biomass))
 
 ggplot(census.nut, aes(x=species, y=Biomass, fill=Nutrient)) +   geom_bar(position=position_dodge(), stat="identity",colour="black") + scale_fill_brewer()+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
                   width=.2,                    # Width of the error bars
-                  position=position_dodge(.9))+ theme_Publication()+ theme(axis.text.x = element_text(size=12, face="italic"))
+                  position=position_dodge(.9))+ theme_Publication()+ theme(axis.text.x = element_text(size=12, face="italic")) +facet_grid(~Year)
 
 ## aridity average
 
@@ -1490,10 +1500,11 @@ shapiro.test(resid(m1))
 anova(m1)
 r.squaredGLMM(m1) ## R squared values 
 
-m2.l <- glmer(presence~Microsite * arid.gradient * Nutrient + (1|Year),data=subset(census.long, species=="P. insularis"), family=binomial)
+
+m2.l <- glmer(presence~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. insularis"), family=binomial)
 car::Anova(m2.l)
 
-m2 <- lmer(log(Plantago.biomass)~Microsite * arid.gradient * Nutrient + (1|Year), data=subset(census.arid, Plantago.biomass>0))
+m2 <- lmer(log(biomass)~Microsite * poly(arid.gradient,2) * Nutrient + (1|Year), data=subset(census.long, species=="P. insularis" & presence==1))
 shapiro.test(resid(m2))
 anova(m2)
 r.squaredGLMM(m2) ## R squared values 
@@ -1901,9 +1912,9 @@ anova(m3)
 r.squaredGLMM(m3) ## R squared values 
 
 m4 <- lmer(mpd~Microsite * arid.gradient + (1|Year), data=mpd.arid)
-shapiro.test(resid(m3))
-anova(m3)
-r.squaredGLMM(m3) ## R squared values 
+shapiro.test(resid(m4))
+anova(m4)
+r.squaredGLMM(m4) ## R squared values 
 
 ### Biomass
 p1 <- ggplot(mean.year) + geom_jitter(aes(x=arid.gradient, y=ihs(bio)), color="#56B4E9", size=3, data=subset(mean.year, Microsite=="shrub")) +geom_jitter(aes(x=arid.gradient, y=ihs(bio)), color="#E69F00", size=3, data=subset(mean.year, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,3),aes(x=arid.gradient, y=ihs(bio)), color="#E69F00", fill="#E69F0080", data=subset(mean.year, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,3),aes(x=arid.gradient, y=ihs(bio)), color="#56B4E9", fill="#56B4E970", data=subset(mean.year, Microsite=="shrub"), lwd=1.4)  + ylab("Annnual plant biomass")+ xlab("") + annotate("text", x=-4.5,y=4, label="a", size=8)+coord_cartesian(ylim=c(0, 4))
