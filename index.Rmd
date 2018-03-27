@@ -2278,7 +2278,7 @@ anova(m2)
 r.squaredGLMM(m2) ## R squared values 
 
 m3.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.long, species=="S. columbariae"), family=binomial)
-car::Anova(m3.l, type=3)
+car::Anova(m3.l, type=2)
 
 m3 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year), data=subset(census.long, species=="S. columbariae" & biomass>0))
 shapiro.test(resid(m3))
@@ -2289,9 +2289,10 @@ mean.occ <- census.long %>% group_by(gams,species, Microsite) %>% summarize(pres
 
 
 ggplot(mean.occ, aes(x=gams, y=presence, fill=species, color=species)) + theme_Publication() + 
-  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence), color="#fb6f70", se=F,  data=subset(census.long, Microsite=="shrub" & species=="P. insularis"), lwd=2)+ geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),se=F, color="#fb6f70",  data=subset(census.long, Microsite=="open" & species=="P. insularis"), lwd=2, lty=3)+ 
-  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),se=F, color="#0daec2",  data=subset(census.long, Microsite=="shrub" & species=="P. tanacetifolia"), lwd=2)+ geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),se=F, color="#0daec2",  data=subset(census.long, Microsite=="open" & species=="P. tanacetifolia"), lwd=2, lty=3)+ geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),se=F, color="#b7d738",  data=subset(census.long, Microsite=="open" & species=="S. columbariae"), lwd=2, lty=3)+ geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),se=F, color="#b7d738",  data=subset(census.long, Microsite=="shrub" & species=="S. columbariae"), lwd=2)
+  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence), color="#fb6f70", fill="#fb6f7050",  data=subset(census.long, species=="P. insularis"), lwd=2)+  
+  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence),fill="#0daec2", color="#0daec2",  data=subset(census.long, species=="P. tanacetifolia"), lwd=2)+ geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence),fill="#b7d73850", color="#b7d738",  data=subset(census.long, species=="S. columbariae"), lwd=2)+ ylab("probability of occurrence") + xlab("Gams index of continentality")
 
 
-
-
+# ggplot(mean.occ, aes(x=gams, y=presence, fill=species, color=species)) + theme_Publication()+ geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#b7d73850", color="#b7d738",  data=subset(census.long, species=="S. columbariae"), lwd=2)+ ylab("probability of occurrence") + xlab("Gams index of continentality") + 
+#   geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)), color="#fb6f70", fill="#fb6f7050",  data=subset(census.long, species=="P. insularis" & biomass>0), lwd=2)+  
+#  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#0daec2", color="#0daec2",  data=subset(census.long, species=="P. tanacetifolia" & biomass>0), lwd=2)
