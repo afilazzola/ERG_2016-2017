@@ -29,36 +29,35 @@ library(tidyverse)
 genus <- c("Phacelia","Plantago","Salvia")
 species <- c("tanacetifolia","ovata","columbariae")
 
-## run download for each 
-for(i in 1:length(genus))
-{
-temp <- gbif(genus[i],species[i]) ## extract species name from GBIF server
-temp<-na.omit(temp[,c("lon","lat")]) ## remove all columns except lat-long
-temp <- temp[!duplicated(temp), ] ## duplicated occurences
-temp["species.name"]<- rep(paste(genus[i]," ",species[i]),nrow(temp)) ##generate column for species name
-write.csv(temp, paste("Data\\occurrence\\",genus[i],".",species[i], ".csv"),row.names=F, sep="") ##write csv with species occurences
-}
+# ## run download for each 
+# for(i in 1:length(genus))
+# {
+# temp <- gbif(genus[i],species[i]) ## extract species name from GBIF server
+# temp<-na.omit(temp[,c("lon","lat")]) ## remove all columns except lat-long
+# temp <- temp[!duplicated(temp), ] ## duplicated occurences
+# temp["species.name"]<- rep(paste(genus[i]," ",species[i]),nrow(temp)) ##generate column for species name
+# write.csv(temp, paste("Data\\occurrence\\",genus[i],".",species[i], ".csv"),row.names=F, sep="") ##write csv with species occurences
+# }
 
 pha <- read.csv("Data\\occurrence\\Phacelia.tanacetifolia.csv")
 pla <- read.csv("Data\\occurrence\\Plantago.ovata.csv")
 sal <- read.csv("Data\\occurrence\\Salvia.columbariae.csv")
+# 
+# ## load rasters
+# r1 <- raster("C:\\Data\\World Clim\\bio_1.bil") #annual temp
+# r2 <- raster("C:\\Data\\World Clim\\bio_12.bil") #annual precipitation
+# r3 <- raster("C:\\Data\\World Clim\\bio_8.bil") #temp wettest quarter
+# r4 <- raster("C:\\Data\\World Clim\\bio_16.bil") #precipitation wettest quarter
+# 
+# calclim <- stack(r1,r2,r3,r4)
+# names(calclim) <- c("Temp","Precip","Temp wettest QR","Precipt wettest QR")
 
-
-## load rasters
-r1 <- raster("rasters\\bio 1.tif") #annual temp
-r2 <- raster("rasters\\bio 12.tif") #annual precipitation
-r3 <- raster("rasters\\bio 8.tif") #temp wettest quarter
-r4 <- raster("rasters\\bio 16.tif") #precipitation wettest quarter
-
-calclim <- stack(r1,r2,r3,r4)
-names(calclim) <- c("Temp","Precip","Temp wettest QR","Precipt wettest QR")
-
-## get California outline
-us <- raster::getData("GADM", country="USA", level=1) ## use state bounds from gadm website:
-cal<- c("California") ## extract states (need to uppercase everything)
-cal = us[match(toupper(cal),toupper(us$NAME_1)),]
-
-calclim <- crop(calclim, cal)
+## load california shape
+cal <- readRDS("GADM_2.8_USA_adm1.rds")
+cal = cal[match(toupper("California"),toupper(cal$NAME_1)),]
+# 
+# ## crop climate data to california
+# calclim <- crop(calclim, extent(cal))
 ```
 
 
@@ -67,11 +66,23 @@ calclim <- crop(calclim, cal)
 ## combine species list
 occ.spp <- rbind(pha,pla,sal)
 
+## turn occurrences in spatial points dataframe
+occ.gps <- SpatialPointsDataFrame(coords=cbind(occ.spp$lon,occ.spp$lat), data=occ.spp)
+occ.gps <- crop(occ.gps, extent(cal))
 
-## extract climate data
-clim.spp <- extract(calclim, occ.spp)
+# ## extract climate data
+# clim.spp <- raster::extract(calclim, occ.gps)
+# clim.spp <- data.frame(clim.spp) ## convert to dataframe
+# clim.spp <- cbind(clim.spp,occ.gps@data)
+# clim.spp <- subset(clim.spp, Temp!="NA") ## remove NA
+# 
+# ## write climate data to csv
+# write.csv(clim.spp, "Data\\phyto.climate.data.csv")
+```
 
-
+### Plot climate data for phytometers
+```{r}
+phyto.clim <- read.csv("Data\\phyto.climate.data.csv")
 
 
 
