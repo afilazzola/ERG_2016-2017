@@ -2127,19 +2127,22 @@ coef(m1)
 
 ggplot(community.arid) + geom_jitter(aes(x=gams, y=Abundance), width = 0.5, color="#56B4E9", size=3, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=Abundance),width = 0.5, color="#E69F00", size=3, data=subset(community.arid, Microsite=="open"))  + theme_Publication() + stat_function(fun = function(x) exp(12.332+ x*-0.1298), lwd=2, lty=1, col="Grey40")+  ylab("annual plant abundance") + xlab("Gams index of continentality")
 
+source("rsquared.r")
+
 m2 <- glmer.nb(Richness ~ Microsite * poly(gams,2) + (1|Year), data=community.arid)
 car::Anova(m2, type=3)
+# rsquared.glmm(m2)
 
 newdf <- expand.grid(gams=seq(45,90, by=0.05), Microsite=c("shrub","open"))
 newdf$fit = predict(m2, type = "response", newdata = newdf)
 
 ## richness
-ggplot(community.arid) + geom_jitter(aes(x=gams, y=Richness), color="#56B4E9", size=3, width = 0.75, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=Richness), color="#E69F00", size=3, data=subset(community.arid, Microsite=="open"), width = 0.75)  + theme_Publication() +  ylab("species richness") + xlab("Gams index of continentality")+ 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#56B4E9", fill="#56B4E980" , data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#E69F00", fill="#E69F0080", data=subset(community.arid, Microsite=="open"), lwd=2)+  ylab("annual biomass") + xlab("Gams index of continentality")
+p1 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=Richness), color="#181818", size=3, alpha=0.4, width = 0.75,shape = 1, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=Richness), color="#181818", size=2,alpha=0.4, data=subset(community.arid, Microsite=="open"),shape = 2, width = 0.75)  + theme_Publication() +  ylab("species richness") + xlab("Gams index of continentality")+ 
+  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#181818", fill="#80808080" , data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
+  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Species richness") + xlab("") + annotate("text", x=50,y=6, label="a", size=8) 
   
 
-#+ geom_smooth(data=subset(newdf,Microsite=="shrub"), aes(x=gams, y=fit), color="#56B4E9",lwd=2)+ geom_smooth(data=subset(newdf,Microsite=="open"), aes(x=gams, y=fit),color="#E69F00",lwd=2)  
+#+ geom_smooth(data=subset(newdf,Microsite=="shrub"), aes(x=gams, y=fit), color="#181818",lwd=2)+ geom_smooth(data=subset(newdf,Microsite=="open"), aes(x=gams, y=fit),color="#505050",lwd=2)  
 
 m3<- lmer(ihs(Biomass) ~ Microsite * poly(gams,2) + (1|Year), data=community.arid)
 anova(m3)
@@ -2147,9 +2150,9 @@ r.squaredGLMM(m3) ## R squared values
 
 
 ## biomass
-ggplot(community.arid) + geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#56B4E9", size=3, width = 0.75, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#E69F00", size=3, width = 0.75, data=subset(community.arid, Microsite=="open"))  + theme_Publication() + 
-  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#56B4E9", fill="#56B4E980", data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
-  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#E69F00", fill="#E69F0080", data=subset(community.arid, Microsite=="open"), lwd=2)+  ylab("annual biomass") + xlab("Gams index of continentality")
+p2 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=3, width = 0.75,shape = 1, alpha=0.5, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=2,shape = 2,alpha=0.5, width = 0.75, data=subset(community.arid, Microsite=="open"))  + theme_Publication() + 
+  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
+  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Annual biomass") + xlab("")+ annotate("text", x=50,y=5, label="b", size=8) 
   
 
 m4<- lmer(mpd~ Microsite * gams + (1|Year), data=mpd.gams)
@@ -2160,7 +2163,7 @@ newdf <- expand.grid(gams=seq(75,90, by=0.05), Microsite=c("shrub","open"))
 newdf$fit = predict(m4, type = "response", newdata = newdf)
 
 ## phylogenetic diversity
-ggplot(mpd.gams)+ geom_jitter(aes(x=gams, y=mpd), color="#56B4E9", size=3, data=subset(mpd.gams, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=mpd), color="#E69F00", size=3, data=subset(mpd.gams, Microsite=="open"))  +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=mpd), data=subset(mpd.gams, Microsite=="shrub"), color="#56B4E9",fill="#56B4E980", lwd=1.4)+  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=mpd), data=subset(mpd.gams, Microsite=="open"), color="#E69F00",fill="#E69F0080", lwd=1.4)+ ylab("Phylogenetic Community Dissimilarity") + xlab("Gams index of continentality")+ theme_Publication()
+p3 <- ggplot(mpd.gams)+ geom_jitter(aes(x=gams, y=mpd), color="#181818", size=3,shape=1, alpha=0.4, data=subset(mpd.gams, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=mpd), color="#181818",alpha=0.4, size=2,shape=2, data=subset(mpd.gams, Microsite=="open"))  +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=mpd), data=subset(mpd.gams, Microsite=="shrub"), color="#181818",fill="#80808080", lwd=2)+  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=mpd), data=subset(mpd.gams, Microsite=="open"), color="#181818",fill="#80808080", lwd=2, lty=2)+ ylab("Phylogenetic community dissimilarity") + xlab("Gams index of continentality")+ theme_Publication()+ annotate("text", x=50,y=1.4, label="c", size=8) 
 
 
 ## native vs non-native
@@ -2168,19 +2171,24 @@ status.gams <- merge(status.data, gams.data, by=c("Year","Site"))
 
 m5<- glmer.nb(native~ Microsite * scale(gams) + (1|Year), data=status.gams) ## need to scale data
 car::Anova(m5, type=3)
+# rsquared.glmm(m5)
+
 
 m6<- glmer.nb(non.native~ Microsite * scale(gams) + (1|Year), data=status.gams)   ## need to scale data
 car::Anova(m6, type=3)
+# rsquared.glmm(m5)
 
 
 status.plot <- gather(status.gams, origin, abundance, 5:6)
 
-ggplot(status.plot) + geom_jitter(aes(x=gams, y=abundance), color="#56B4E950", size=3, data=subset(status.plot, Microsite=="shrub"), width = 0.75) +geom_jitter(aes(x=gams, y=abundance), width = 0.75, color="#E69F0050", size=3, data=subset(status.plot, Microsite=="open"))  + theme_Publication() + 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance), color="#E69F00", se=F, data=subset(status.plot, Microsite=="open" & origin=="native"), lwd=2, lty=2)+
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#E69F00",  data=subset(status.plot, Microsite=="open" & origin=="non.native"), lwd=2)+
- geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#56B4E9", data=subset(status.plot, Microsite=="shrub" & origin=="native"), lwd=2, lty=2)+
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#56B4E9",  data=subset(status.plot, Microsite=="shrub" & origin=="non.native"), lwd=2) +  ylab("annual plant abundance") + xlab("Gams index of continentality")
+p4 <- ggplot(subset(status.plot, abundance>0)) + geom_jitter(aes(x=gams, y=abundance), color="#181818", size=3, data=subset(status.plot, Microsite=="shrub"), width = 1, shape=1, alpha=0.3) +geom_jitter(aes(x=gams, y=abundance), width = 1, color="#181818", size=2,alpha=0.3,shape=2, data=subset(status.plot, Microsite=="open"))  + theme_Publication() + 
+  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance), color="#505050", se=F, data=subset(status.plot, Microsite=="open" & origin=="native"), lwd=2, lty=2)+
+  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#181818",  data=subset(status.plot, Microsite=="open" & origin=="non.native"), lwd=2, lty=2)+
+ geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#505050", data=subset(status.plot, Microsite=="shrub" & origin=="native"), lwd=2)+
+  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#181818",  data=subset(status.plot, Microsite=="shrub" & origin=="non.native"), lwd=2) +  ylab("Annual plant abundance") + xlab("Gams index of continentality")+ annotate("text", x=50,y=310, label="d", size=8) 
 
+
+grid.arrange(p1,p2,p3,p4)
 
 
 ### Nutrients 
@@ -2193,16 +2201,21 @@ summary(m5)
 anova(m5)
 r.squaredGLMM(m5) ## R squared values 
 
-ggplot(nutrient.mean) + geom_jitter(aes(x=gams, y=nitrogen), color="#56B4E9", size=3, data=subset(nutrient.mean, microsite=="shrub"))+ geom_jitter(aes(x=gams, y=nitrogen), color="#E69F00", size=3, data=subset(nutrient.mean, microsite=="open"))+  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=nitrogen), color="#56B4E9", fill="#56B4E980", data=subset(nutrient.mean, microsite=="shrub"), lwd=1.4) +  
-  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=nitrogen), color="#E69F00", fill="#E69F0080",data=subset(nutrient.mean, microsite=="open"), lwd=1.4)+ ylab("Nitrogen (ppm)") + xlab("")+ theme_Publication()+ coord_cartesian(ylim=c(-2, 26)) + xlab("Gams index of continentality")
+p5 <- ggplot(nutrient.mean) + geom_jitter(aes(x=gams, y=nitrogen), color="#181818", size=3, shape=16,alpha=0.5, data=subset(nutrient.mean, microsite=="shrub"))+ geom_jitter(aes(x=gams, y=nitrogen), color="#181818", size=3,shape=17, alpha=0.4, data=subset(nutrient.mean, microsite=="open"))+  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=nitrogen), color="#181818", fill="#80808080", data=subset(nutrient.mean, microsite=="shrub"), lwd=2) +  
+  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=nitrogen), color="#181818", fill="#80808080",data=subset(nutrient.mean, microsite=="open"), lwd=2, lty=2)+ ylab("Nitrogen (ppm)") + xlab("")+ theme_Publication()+ coord_cartesian(ylim=c(-2, 26)) + xlab("")+ annotate("text", x=63,y=25, label="a", size=8) 
 
 
 smc.early <- subset(smc, Census=="emergence")
 smc.early <- merge(smc.early, gams.data, by=c("Year","Site"))
 
+## nitrogen
+m6 <- lmer(log(swc.avg) ~ poly(gams,2)* Microsite + (1|Year), data=smc.early)
+summary(m6)
+anova(m6)
+r.squaredGLMM(m6) ## R squared values 
 
 
-ggplot(smc.early) + geom_jitter(aes(x=gams, y=swc.avg), color="#56B4E9", size=3, data=subset(smc.early, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=swc.avg), color="#E69F00", size=3, data=subset(smc.early, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=swc.avg), data=smc.early, lwd=1.4, color="black") + ylab("Soil moisture at emergence (%)")  + xlab("Gams index of continentality")
+p6 <- ggplot(smc.early) + geom_jitter(aes(x=gams, y=swc.avg), color="#181818", size=3, shape=16,alpha=0.5, data=subset(smc.early, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=swc.avg), color="#181818", size=3,shape=17,alpha=0.5, data=subset(smc.early, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=swc.avg), data=smc.early, lwd=2, color="black") + ylab("Soil moisture at emergence (%)")  + xlab("")+ annotate("text", x=50,y=35, label="b", size=8) 
 
 
 ## temperature variability
@@ -2212,14 +2225,18 @@ anova(m7)
 r.squaredGLMM(m7) ## R squared values 
 
 
-ggplot(hobo.arid) + geom_jitter(aes(x=gams, y=temp.var), color="#56B4E9", size=3, data=subset(hobo.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=temp.var), color="#E69F00", size=3, data=subset(hobo.arid, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#E69F00", fill="#E69F0080", data=subset(hobo.arid, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#56B4E9", fill="#56B4E970", data=subset(hobo.arid, Microsite=="shrub"), lwd=1.4)  + ylab("Temperature variation") + xlab("Gams index of continentality")
+p7 <- ggplot(hobo.arid) + geom_jitter(aes(x=gams, y=temp.var), color="#181818", size=3, shape=16, alpha=0.5, data=subset(hobo.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=temp.var), color="#181818", size=3, shape=17, alpha=0.5, data=subset(hobo.arid, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#181818", fill="#80808080", data=subset(hobo.arid, Microsite=="open"), lwd=2) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#181818", fill="#80808080", data=subset(hobo.arid, Microsite=="shrub"), lwd=2, lty=2)  + ylab("Temperature variation") + xlab("Gams index of continentality")+ annotate("text", x=50,y=125, label="c", size=8) 
 
 
-## temperature variability
-m8 <- lmer(rh.var~Microsite * poly(gams,2) + (1|Year), data=hobo.arid)
-shapiro.test(resid(m8))
+## soil compaction
+m8 <- lm(log(compact)  ~  Microsite * gams, data=shrub.clim)
+summary(m8)
 anova(m8)
-r.squaredGLMM(m8) ## R squared value
+r.squaredGLMM(m8) ## R squared values 
+
+p8 <- ggplot(shrub.clim) + geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=16, alpha=0.5, data=subset(shrub.clim, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=17, alpha=0.5, data=subset(shrub.clim, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~x, aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="open"), lwd=2) +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="shrub"), lwd=2, lty=2)  + ylab("Soil compaction") + xlab("Gams index of continentality")+ annotate("text", x=63,y=1.1, label="d", size=8) 
+
+grid.arrange(p5,p6,p7,p8)
 
 ```
 
@@ -2234,21 +2251,21 @@ census.long[,"species"] <- as.factor(census.long$species)
 ## microsite average
 census.micro <- census.long %>% filter(biomass>0) %>%  group_by(Microsite, species) %>%  summarize(Biomass=mean(biomass), error=se(biomass))
 
-ggplot(census.micro, aes(x=species, y=Biomass, fill=Microsite)) +   geom_bar(position=position_dodge(), stat="identity", colour="black") + scale_fill_brewer()+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
+p9 <- ggplot(census.micro, aes(x=species, y=Biomass, fill=Microsite)) +   geom_bar(position=position_dodge(), stat="identity", colour="black") + scale_fill_brewer(palette="Greys")+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
                   width=.2,                    # Width of the error bars
                   position=position_dodge(.9))+ theme_Publication() + theme(axis.text.x = element_text(size=16, face="italic"),axis.text.y = element_text(size=16),axis.title = element_text(size=20),legend.text=element_text(size=18))
 
 ## nutrient average
 census.nut <- census.long %>% filter(biomass>0) %>%  group_by(Nutrient, species) %>%  summarize(Biomass=mean(biomass), error=se(biomass))
 
-ggplot(census.nut, aes(x=species, y=Biomass, fill=Nutrient)) +   geom_bar(position=position_dodge(), stat="identity",colour="black") + scale_fill_brewer()+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
+p10 <- ggplot(census.nut, aes(x=species, y=Biomass, fill=Nutrient)) +   geom_bar(position=position_dodge(), stat="identity",colour="black") + scale_fill_brewer(palette="Greys")+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
                   width=.2,                    # Width of the error bars
                   position=position_dodge(.9))+ theme_Publication()+ theme(axis.text.x = element_text(size=16, face="italic"),axis.text.y = element_text(size=16),axis.title = element_text(size=20),legend.text=element_text(size=18))
 
 
 ## aridity average
 
-ggplot(census.long, aes(x=arid.gradient, y=biomass, fill=species, colour=species)) + theme_Publication()+   stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#E69F00",fill="#E69F0040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#56B4E9", fill="#56B4E940", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
+# ggplot(census.long, aes(x=arid.gradient, y=biomass, fill=species, colour=species)) + theme_Publication()+   stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#009E73", fill="#009E7340", data=subset(census.long, species=="Phacelia.biomass" & biomass>0)) + stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#505050",fill="#50505040", data=subset(census.long, species=="Plantago.biomass" & biomass>0))+ stat_smooth(method="lm", formula= y~exp(x),aes(x=arid.gradient, y=biomass), color="#181818", fill="#18181840", data=subset(census.long, species=="Salvia.biomass" & biomass>0))
 
 ### need to separate zeros using gamma-hurdle model
 ##http://seananderson.ca/2014/05/18/gamma-hurdle.html
@@ -2257,9 +2274,11 @@ ggplot(census.long, aes(x=arid.gradient, y=biomass, fill=species, colour=species
 ## logistic first
 census.long[,"presence"] <- ifelse(census.long$biomass>0,1,0)
 census.long <- merge(census.long, gams.data, by=c("Year","Site"))
+## Drop panoche 2017 because of cold
+census.npan <- census.long %>% filter(Site!="PanocheHills" | Year!="2017")
 
 
-m1.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. tanacetifolia"), family=binomial)
+m1.l <- glmer(presence~Microsite * gams * Nutrient + (1|Year),data=subset(census.npan, species=="P. tanacetifolia"), family=binomial)
 car::Anova(m1.l, type=2)
 
 
@@ -2269,30 +2288,42 @@ anova(m1)
 r.squaredGLMM(m1) ## R squared values 
 
 
-m2.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. insularis"), family=binomial)
-car::Anova(m2.l, type=2)
 
+m2.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.npan, species=="P. insularis"), family=binomial)
+car::Anova(m2.l, type=2)
 m2 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year), data=subset(census.long, species=="P. insularis" & presence==1))
 shapiro.test(resid(m2))
 anova(m2)
 r.squaredGLMM(m2) ## R squared values 
 
-m3.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.long, species=="S. columbariae"), family=binomial)
-car::Anova(m3.l, type=2)
+m3.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.npan, species=="S. columbariae"), family=binomial)
+car::Anova(m3.l, type=3)
 
 m3 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year), data=subset(census.long, species=="S. columbariae" & biomass>0))
 shapiro.test(resid(m3))
 anova(m3)
 r.squaredGLMM(m3) ## R squared values 
 
-mean.occ <- census.long %>% group_by(gams,species, Microsite) %>% summarize(presence=mean(presence))
+
+## summary presence
+mean.occ <- census.npan %>% group_by(gams,species, Microsite) %>% summarize(presence=mean(presence))
 
 
-ggplot(mean.occ, aes(x=gams, y=presence, fill=species, color=species)) + theme_Publication() + 
-  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence), color="#fb6f70", fill="#fb6f7050",  data=subset(census.long, species=="P. insularis"), lwd=2)+  
-  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence),fill="#0daec2", color="#0daec2",  data=subset(census.long, species=="P. tanacetifolia"), lwd=2)+ geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence),fill="#b7d73850", color="#b7d738",  data=subset(census.long, species=="S. columbariae"), lwd=2)+ ylab("probability of occurrence") + xlab("Gams index of continentality")
+p11 <- ggplot(census.npan, aes(x=gams, y=presence, fill=species, color=species))  + theme_Publication()+  
+  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),fill="#0daec2", color="#0daec2",  data=subset(census.npan, species=="P. tanacetifolia" & Microsite=="shrub"), lwd=2)+  
+  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),fill="#0daec2", color="#0daec2",  data=subset(census.npan, species=="P. tanacetifolia"& Microsite=="open"), lwd=2, lty=2) +  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence), color="#fb6f70", fill="#fb6f7050",  data=subset(census.npan, species=="P. insularis"), lwd=2)+ geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence),fill="#b7d73850", color="#b7d738",  data=subset(census.npan, species=="S. columbariae"), lwd=2)+ ylab("Probability of occurrence") + xlab("Gams index of continentality")
 
 
-# ggplot(mean.occ, aes(x=gams, y=presence, fill=species, color=species)) + theme_Publication()+ geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#b7d73850", color="#b7d738",  data=subset(census.long, species=="S. columbariae"), lwd=2)+ ylab("probability of occurrence") + xlab("Gams index of continentality") + 
-#   geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)), color="#fb6f70", fill="#fb6f7050",  data=subset(census.long, species=="P. insularis" & biomass>0), lwd=2)+  
-#  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#0daec2", color="#0daec2",  data=subset(census.long, species=="P. tanacetifolia" & biomass>0), lwd=2)
+p12 <- ggplot(census.long, aes(x=gams, y=biomass, fill=species, color=species))  + theme_Publication() +  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)), color="#fb6f70", fill="#fb6f7050",  data=subset(census.long, species=="P. insularis" & biomass>0), lwd=2, fullrange=TRUE) + geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#b7d73850", color="#b7d738",  data=subset(census.long, species=="S. columbariae"& biomass>0), lwd=3)+
+  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#0daec2", color="#0daec2",  data=subset(census.long, species=="P. tanacetifolia" & biomass>0 & Microsite=="shrub"), lwd=2, fullrange=TRUE)+geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#0daec2", color="#0daec2",  data=subset(census.long, species=="P. tanacetifolia" & biomass>0 & Microsite=="open"), lwd=2,lty=2, fullrange=TRUE)+ ylab("Phytometer biomass") + xlab("Gams index of continentality") 
+
+
+grid.arrange(p9,p11,p10, p12)
+
+
+
+## test to see if GAMS related to aridity
+
+arid.gam <- merge(arid.vals, gams.data, by=c("Site"))
+
+cor(arid.gam$Gradient, arid.gam$gams)

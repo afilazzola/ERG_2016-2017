@@ -1,0 +1,45 @@
+---
+title: 'The effect of a dominant shrub on annuals plants in a desert system changes along a gradient of precipitation.'
+author: "Alex Filazzola"
+date: "May 2017"
+output:
+  html_document:
+    theme: yeti
+    toc: yes
+    toc_float: yes
+    toc_depth: 3
+  
+---
+### Appendix B  - compare phytometer with climate data
+
+
+### Load libraries
+```{r load packages, echo=FALSE, warning=FALSE, message=FALSE}
+## load packages for spatial manipulation
+library(raster)
+library(rgdal)
+library(dismo)
+library(tidyverse)
+```
+
+
+### Download species occurrences and load rasters
+```{r}
+## list species
+genus <- c("Phacelia","Plantago","Salvia")
+species <- c("tanacetifolia","insuarlis","columbariae")
+
+## run download for each 
+for(i in 1:length(genus))
+{
+temp <- gbif(genus[i],species[i]) ## extract species name from GBIF server
+temp<-na.omit(temp[,c("lon","lat")]) ## remove all columns except lat-long
+temp <- temp[!duplicated(temp), ] ## duplicated occurences
+temp["species.name"]<- rep(paste(genus[i]," ",species[i]),nrow(temp)) ##generate column for species name
+write.csv(temp, paste("Data\\occurrence\\",genus[i],".",species[i], ".csv"),row.names=F) ##write csv with species occurences
+}
+
+## load rasters
+
+
+```
