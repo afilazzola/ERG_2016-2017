@@ -1,8 +1,1 @@
-name,gradient,Annual.Temp,Temp.Seasonality,Temp.wettest.QR,Annual.precip,Precip.seasonality,Precipt.wettest.QR
-PanocheHills,1,144,6202,80,381,83,195
-Cuyama,2,141,5610,82,542,90,306
-TejonRanch,3,137,6514,69,305,80,157
-HeartofMojave,4,197,7821,294,135,47,50
-Barstow,5,193,7978,112,79,47,32
-SheepholeValley,6,209,7684,305,109,46,42
-Tecopa,7,201,8655,115,77,40,28
+name,gradient,Annual.Temp,Temp.Seasonality,Temp.wettest.QR,Annual.precip,Precip.seasonality,Precipt.wettest.QRPanocheHills,1,144,6202,80,381,83,195Cuyama,2,141,5610,82,542,90,306TejonRanch,3,137,6514,69,305,80,157HeartofMojave,4,197,7821,294,135,47,50Barstow,5,193,7978,112,79,47,32SheepholeValley,6,209,7684,305,109,46,42Tecopa,7,201,8655,115,77,40,28
