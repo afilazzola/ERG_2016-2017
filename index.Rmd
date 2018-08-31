@@ -2225,7 +2225,7 @@ anova(m7)
 r.squaredGLMM(m7) ## R squared values 
 
 
-p7 <- ggplot(hobo.arid) + geom_jitter(aes(x=gams, y=temp.var), color="#181818", size=3, shape=16, alpha=0.5, data=subset(hobo.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=temp.var), color="#181818", size=3, shape=17, alpha=0.5, data=subset(hobo.arid, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#181818", fill="#80808080", data=subset(hobo.arid, Microsite=="open"), lwd=2) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#181818", fill="#80808080", data=subset(hobo.arid, Microsite=="shrub"), lwd=2, lty=2)  + ylab("Temperature variation") + xlab("Gams index of continentality")+ annotate("text", x=50,y=125, label="c", size=8) 
+p7 <- ggplot(hobo.arid) + geom_jitter(aes(x=gams, y=temp.var), color="#181818", size=3, shape=16, alpha=0.5, data=subset(hobo.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=temp.var), color="#181818", size=3, shape=17, alpha=0.5, data=subset(hobo.arid, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#181818", fill="#80808080", data=subset(hobo.arid, Microsite=="open"), lwd=2, lty=2) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#181818", fill="#80808080", data=subset(hobo.arid, Microsite=="shrub"), lwd=2)  + ylab("Temperature variation") + xlab("Gams index of continentality")+ annotate("text", x=50,y=125, label="c", size=8) 
 
 
 ## soil compaction
@@ -2234,7 +2234,7 @@ summary(m8)
 anova(m8)
 r.squaredGLMM(m8) ## R squared values 
 
-p8 <- ggplot(shrub.clim) + geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=16, alpha=0.5, data=subset(shrub.clim, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=17, alpha=0.5, data=subset(shrub.clim, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~x, aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="open"), lwd=2) +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="shrub"), lwd=2, lty=2)  + ylab("Soil compaction") + xlab("Gams index of continentality")+ annotate("text", x=63,y=1.1, label="d", size=8) 
+p8 <- ggplot(shrub.clim) + geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=16, alpha=0.5, data=subset(shrub.clim, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=17, alpha=0.5, data=subset(shrub.clim, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~x, aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="open"), lwd=2, lty=2) +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="shrub"), lwd=2)  + ylab("Soil compaction") + xlab("Gams index of continentality")+ annotate("text", x=63,y=1.1, label="d", size=8) 
 
 grid.arrange(p5,p6,p7,p8)
 

@@ -84,6 +84,16 @@ occ.gps <- crop(occ.gps, extent(cal))
 ```{r}
 phyto.clim <- read.csv("Data\\phyto.climate.data.csv")
 
+phyto.clim[,"Temp"] <- phyto.clim[,"Temp"]/10
+phyto.clim[,"Temp.wettest.QR"] <- phyto.clim[,"Temp.wettest.QR"]/10
 
 
+## Plot temperature profiles
+p1 <- ggplot(phyto.clim, aes(x=Temp, fill=species.name)) + geom_histogram(alpha=0.4, position="identity") + theme_Publication() +xlim(c(5,25))+ xlab("Average annual temperature (°C)")
 
+## Plot temperature profiles
+p2 <- ggplot(phyto.clim, aes(x=Precipt.wettest.QR, fill=species.name)) + geom_histogram(alpha=0.4, position="identity") + theme_Publication() +xlim(c(0,500)) + xlab("Precipitation in Wettest Quarter (mm)")
+
+grid.arrange(p1,p2, ncol=2)
+
+```
