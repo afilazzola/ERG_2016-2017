@@ -432,58 +432,63 @@ avg.max <- function(x) {
   x[x==y] <- avg
   return(x)
 }
-  
-## dot chart to find outliers (remove or Avg)
-#dotchart(comm.trans$E.cicutarium) ## Erodium
-comm.trans[,"E.cicutarium"] <- avg.max(comm.trans$E.cicutarium) ## removed outlier
-#dotchart(comm.trans$A.wrangelianus) ## Chilean trefoil
-comm.trans[,"A.wrangelianus"] <- NULL ## removed entire species
-#dotchart(comm.trans$A.lentiginosus) ##
-comm.trans[,"A.lentiginosus"] <- avg.max(comm.trans$A.lentiginosus) ## removed outlier
-#dotchart(comm.trans$H.vulgare) ## Hordeum
-comm.trans[,"H.vulgare"] <- NULL ## removed entire species
-#dotchart(comm.trans$Pectocarya.spp) ## 
-comm.trans[,"Pectocarya.spp"] <- avg.max(comm.trans$Pectocarya.spp) ## removed outlier
-#dotchart(comm.trans$L.arizonicus) ## Lupin 
-comm.trans[,"L.arizonicus"] <- NULL ## removed entire species
-#dotchart(comm.trans$M.bellioides) ##
-comm.trans[,"M.bellioides"] <- NULL ## removed entire species
-#dotchart(comm.trans$B.nigra) ## Mustard
-comm.trans[,"B.nigra"] <- NULL ## removed entire species
-#dotchart(comm.trans$N.demissum) ## Sand Matt
-comm.trans[,"N.demissum"] <- avg.max(comm.trans$N.demissum) ## removed outlier
-#dotchart(comm.trans$L.gracilis) ## 
-comm.trans[,"L.gracilis"] <- avg.max(comm.trans$L.gracilis) ## removed outlier
-#dotchart(comm.trans$A.grandiflora) ##  Amsinckia
-comm.trans[,"A.grandiflora"] <- NULL ## removed entire species
-#dotchart(comm.trans$B.diandrus) ##  Bromus diandrus
-comm.trans[,"B.diandrus"] <- NULL ## removed entire species
-#dotchart(comm.trans$M.affinis) ##  
-comm.trans[,"M.affinis"] <- NULL ## removed entire species
-#dotchart(comm.trans$P.crenulata) ##  
-comm.trans[,"P.crenulata"] <- NULL ## removed entire species
-#dotchart(comm.trans$Erinoginum.spp) # buckwheat
-comm.trans[,"Erinoginum.spp"] <- avg.max(comm.trans$Erinoginum.spp) ## removed outlier
-#dotchart(comm.trans$C.lasiophyllus) # 
-comm.trans[,"C.lasiophyllus"] <- NULL ## removed entire species
+#   
+# ## dot chart to find outliers (remove or Avg)
+# #dotchart(comm.trans$E.cicutarium) ## Erodium
+# comm.trans[,"E.cicutarium"] <- avg.max(comm.trans$E.cicutarium) ## removed outlier
+# #dotchart(comm.trans$A.wrangelianus) ## Chilean trefoil
+# comm.trans[,"A.wrangelianus"] <- NULL ## removed entire species
+# #dotchart(comm.trans$A.lentiginosus) ##
+# comm.trans[,"A.lentiginosus"] <- avg.max(comm.trans$A.lentiginosus) ## removed outlier
+# #dotchart(comm.trans$H.vulgare) ## Hordeum
+# comm.trans[,"H.vulgare"] <- NULL ## removed entire species
+# #dotchart(comm.trans$Pectocarya.spp) ## 
+# comm.trans[,"Pectocarya.spp"] <- avg.max(comm.trans$Pectocarya.spp) ## removed outlier
+# #dotchart(comm.trans$L.arizonicus) ## Lupin 
+# comm.trans[,"L.arizonicus"] <- NULL ## removed entire species
+# #dotchart(comm.trans$M.bellioides) ##
+# comm.trans[,"M.bellioides"] <- NULL ## removed entire species
+# #dotchart(comm.trans$B.nigra) ## Mustard
+# comm.trans[,"B.nigra"] <- NULL ## removed entire species
+# #dotchart(comm.trans$N.demissum) ## Sand Matt
+# comm.trans[,"N.demissum"] <- avg.max(comm.trans$N.demissum) ## removed outlier
+# #dotchart(comm.trans$L.gracilis) ## 
+# comm.trans[,"L.gracilis"] <- avg.max(comm.trans$L.gracilis) ## removed outlier
+# #dotchart(comm.trans$A.grandiflora) ##  Amsinckia
+# comm.trans[,"A.grandiflora"] <- NULL ## removed entire species
+# #dotchart(comm.trans$B.diandrus) ##  Bromus diandrus
+# comm.trans[,"B.diandrus"] <- NULL ## removed entire species
+# #dotchart(comm.trans$M.affinis) ##  
+# comm.trans[,"M.affinis"] <- NULL ## removed entire species
+# #dotchart(comm.trans$P.crenulata) ##  
+# comm.trans[,"P.crenulata"] <- NULL ## removed entire species
+# #dotchart(comm.trans$Erinoginum.spp) # buckwheat
+# comm.trans[,"Erinoginum.spp"] <- avg.max(comm.trans$Erinoginum.spp) ## removed outlier
+# #dotchart(comm.trans$C.lasiophyllus) # 
+# comm.trans[,"C.lasiophyllus"] <- NULL ## removed entire species
 
-
-
-library(usdm)
+# 
+# 
+# library(usdm)
 library(corrplot)
+# 
+# ## Check for collinearity
+# vifcor(comm.trans)
+# 
+# ## drop Claviformis because of collinear problems in P.insularis
+# comm.trans[,"C.claviformis"] <- NULL ## removed entire species
+# comm.trans[,"L.decorus"] <- NULL ## removed entire species
+# comm.trans[,"E.glyptosperma"] <- NULL ## removed entire species
+# comm.trans[,"E.wallacei"] <- NULL ## removed entire species
 
-## Check for collinearity
-vifcor(comm.trans)
+# ## outliers removed
+# cor.dat <- cor(comm.trans[,1:20])
+# corrplot(cor.dat, method="number")
 
-## drop Claviformis because of collinear problems in P.insularis
-comm.trans[,"C.claviformis"] <- NULL ## removed entire species
-comm.trans[,"L.decorus"] <- NULL ## removed entire species
-comm.trans[,"E.glyptosperma"] <- NULL ## removed entire species
-comm.trans[,"E.wallacei"] <- NULL ## removed entire species
 
-cor.dat <- cor(comm.trans[,1:20])
+## outliers left
+cor.dat <- cor(comm.trans[,1:35])
 corrplot(cor.dat, method="number")
-
 
 ## calculate distances
 dis <- vegdist(comm.trans, method="bray")
@@ -533,7 +538,7 @@ spp.priority <- colSums(comm.trans)
 par(mar=c(4.5,4.5,0.5,0.5))
 plot(ord, type="n")
 ordiellipse(ord, grp, lty = 2, col = "grey80", draw="polygon", alpha=150)
-orditorp(ord, display = "species", cex = 0.7, col = "darkorange3", priority=spp.priority, air=0.5)
+orditorp(ord, display = "species", cex = 0.7, col = "darkorange3", priority=spp.priority, air=0.8)
 orditorp(ord, display = "sites", cex = 0.7, col = "darkslateblue", air=0.1)
 
 
@@ -718,7 +723,7 @@ grid.arrange(p5,p8,p6,p7)
 
 
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 ### Microsite comparisons
 
 
@@ -770,15 +775,11 @@ coef(m1)
 source("rsquared.r")
 
 m2 <- glmer.nb(Richness ~ Microsite * poly(gams,2) + (1|Year), data=community.arid)
-car::Anova(m2, type=3)
+car::Anova(m2, type=2)
 # rsquared.glmm(m2)
 
-m2.gam <- gam(Richness~ Microsite +s(gams, k=3) + s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=poisson, data=community.arid)
+# m2.gam <- gam(Richness~ Microsite +s(gams, k=3) + s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=poisson, data=community.arid)
 
-
-library(voxel)
-plot1 <- plotGAM(m2.gam, smooth.cov = "gams", groupCovs="Microsite",
-                  rawOrFitted = "raw", plotCI=TRUE, orderedAsFactor = FALSE) 
 
 p1 <- ggplot(community.arid, aes(x=gams, y=Richness)) + geom_jitter(aes(x=gams, y=Richness), color="#181818", size=3, alpha=0.4, width = 0.75,shape = 1, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=Richness), color="#181818", size=2,alpha=0.4, data=subset(community.arid, Microsite=="open"),shape = 2, width = 0.75)  + theme_Publication() +
   stat_smooth(method="gam", method.args=list(family="poisson"), formula= y~s,aes(x=gams, y=Richness), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)
@@ -794,8 +795,8 @@ m3<- lmer(ihs(Biomass) ~ Microsite * poly(gams,2) + (1|Year), data=community.ari
 anova(m3)
 r.squaredGLMM(m3) ## R squared values
 
-m3.gam <- gam(ihs(Biomass)~  s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=gaussian, data=community.arid)
-
+# m3.gam <- gam(ihs(Biomass)~  s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=gaussian, data=community.arid)
+# 
 
 ## biomass
 p2 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=3, width = 0.75,shape = 1, alpha=0.5, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=2,shape = 2,alpha=0.5, width = 0.75, data=subset(community.arid, Microsite=="open"))  + theme_Publication() + 
