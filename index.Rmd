@@ -550,7 +550,7 @@ nutrients.vars <- data.frame(nutrients.mean)
 
 ## summarize daily means across sites
 HOBO <- read.csv("Data/ERG.logger.data.csv")
-HOBO.data <- HOBO %>%  group_by(Site, Microsite, Year, Month, Day) %>% summarize(Temp=mean(Temp),RH=mean(RH))
+HOBO.data <- HOBO %>%  group_by(Site, Microsite, Year, Month, Day) %>% summarize(temp.var=var(Temp),Temp=mean(Temp),RH=mean(RH))
 
 means <- HOBO.data %>% group_by(Microsite, Site) %>% summarize(Temp.=mean(Temp, na.rm=T),rh=mean(RH, na.rm=T),temp.se=se(Temp),rh.se=se(RH))
 means <- data.frame(means)
@@ -685,20 +685,28 @@ HOBO.season <- rbind(season1,season2)
 HOBO.season[,"season"] <- c(rep("season.1",nrow(season1)),rep("season.2",nrow(season2)))
 HOBO.season <- na.omit(HOBO.season)
 
+## Means across the entire season
 hobo.means <- HOBO.season %>% group_by(season, Microsite, Site) %>% summarize(temp.avg=mean(Temp),temp.var=var(Temp),temp.sd=sd(Temp),temp.se=se(Temp),rh.avg=mean(RH, na.rm=T),rh.var=var(RH, na.rm=T),rh.se=se(RH),frost=(sum(na.omit(Temp)<0)/length(na.omit(Temp))*100),heat=(sum(na.omit(Temp)>30)/length(na.omit(Temp))*100))
 hobo.means[,"Year"] <- c(rep(2016,14),rep(2017,14))
 
+## mean daily variation
+hobo.var <-  HOBO.season  %>% group_by(season, Microsite, Site) %>% summarize(day.var=mean(temp.var))
+hobo.var <- data.frame(hobo.var)
+hobo.var[,"Year"] <- c(rep(2016,14),rep(2017,14))
+
+
 hobo.arid <- merge(hobo.means, gams.data, by=c("Site","Year"))
+hobo.var <- merge(hobo.var, gams.data, by=c("Site","Year"))
 # hobo.arid[,"CV"] <-hobo.arid[,"temp.sd"] /hobo.arid[,"CV"] 
 
 ## temperature variability
-m7 <- lmer(temp.var~Microsite * poly(gams,2) + (1|Year), data=hobo.arid)
+m7 <- lmer(day.var~Microsite * poly(gams,2) + (1|Year), data=hobo.var)
 shapiro.test(resid(m7))
 anova(m7)
 r.squaredGLMM(m7) ## R squared values 
 
 
-p7 <- ggplot(hobo.arid) + geom_jitter(aes(x=gams, y=temp.var), color="#56B4E9", size=3, data=subset(hobo.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=temp.var), color="#E69F00", size=3, data=subset(hobo.arid, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#E69F00", fill="#E69F0080", data=subset(hobo.arid, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#56B4E9", fill="#56B4E970", data=subset(hobo.arid, Microsite=="shrub"), lwd=1.4)  + ylab("Temperature variation") + xlab("Aridity Gradient")+ annotate("text", x=-4.5,y=125, label="d", size=8) 
+p7 <- ggplot(hobo.var) + geom_jitter(aes(x=gams, y=day.var), color="#56B4E9", size=3, data=subset(hobo.var, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=day.var), color="#E69F00", size=3, data=subset(hobo.var, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=day.var), color="#E69F00", fill="#E69F0080", data=subset(hobo.var, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=day.var), color="#56B4E9", fill="#56B4E970", data=subset(hobo.var, Microsite=="shrub"), lwd=1.4)  + ylab("Temperature variation") + xlab("Aridity Gradient")+ annotate("text", x=-4.5,y=125, label="d", size=8) 
 
 shrubz <- read.csv("Data/ERG.shrub.csv")
 shrub.mean <- shrubz %>% group_by(Site, Microsite) %>% summarize(compact=mean(Compaction))
@@ -714,7 +722,7 @@ r.squaredGLMM(m8) ## R squared values
 
 
 p8 <- ggplot(shrub.clim) + geom_jitter(aes(x=gams, y=compact), color="#56B4E9", size=3, data=subset(shrub.clim, Microsite=="shrub"))+ geom_jitter(aes(x=gams, y=compact), color="#E69F00", size=3, data=subset(shrub.clim, Microsite=="open"))+  stat_smooth(method="lm", formula= y~exp(x),aes(x=gams, y=compact), color="#56B4E9", fill="#56B4E980", data=subset(shrub.clim, Microsite=="shrub"), lwd=1.4) +  
-  stat_smooth(method="lm", formula= y~exp(x),aes(x=gams, y=compact), color="#E69F00", fill="#E69F0080",data=subset(shrub.clim, Microsite=="open"), lwd=1.4)+ ylab("Soil compaction") + xlab("")+ theme_Publication() + annotate("text", x=-4.4,y=2.5, label="b", size=8) +coord_cartesian(ylim=c(0.5, 2.5))
+  stat_smooth(method="lm", formula= y~exp(x),aes(x=gams, y=compact), color="#E69F00", fill="#E69F0080",data=subset(shrub.clim, Microsite=="open"), lwd=1.4)+ ylab(expression("Soil compaction (kg/cm"*"2"^2*")")) + xlab("")+ theme_Publication() + annotate("text", x=-4.4,y=2.5, label="b", size=8) +coord_cartesian(ylim=c(0.5, 2.5))
 
 grid.arrange(p5,p8,p6,p7)
 
@@ -872,7 +880,7 @@ anova(m7)
 r.squaredGLMM(m7) ## R squared values 
 
 
-p7 <- ggplot(hobo.arid) + geom_jitter(aes(x=gams, y=temp.var), color="#181818", size=3, shape=16, alpha=0.5, data=subset(hobo.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=temp.var), color="#181818", size=3, shape=17, alpha=0.5, data=subset(hobo.arid, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#181818", fill="#80808080", data=subset(hobo.arid, Microsite=="open"), lwd=2, lty=2) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=temp.var), color="#181818", fill="#80808080", data=subset(hobo.arid, Microsite=="shrub"), lwd=2)  + ylab("Temperature variation") + xlab("Gams index of continentality")+ annotate("text", x=50,y=125, label="c", size=8) 
+p7 <- ggplot(hobo.var) + geom_jitter(aes(x=gams, y=day.var), color="#181818", size=3, shape=16, alpha=0.5, data=subset(hobo.var, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=day.var), color="#181818", size=3, shape=17, alpha=0.5, data=subset(hobo.var, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=day.var), color="#181818", fill="#80808080", data=subset(hobo.var, Microsite=="open"), lwd=2, lty=2) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=day.var), color="#181818", fill="#80808080", data=subset(hobo.var, Microsite=="shrub"), lwd=2)  + ylab("Temperature variation") + xlab("Gams index of continentality")+ annotate("text", x=50,y=125, label="c", size=8) 
 
 
 ## soil compaction
@@ -881,7 +889,7 @@ summary(m8)
 anova(m8)
 r.squaredGLMM(m8) ## R squared values 
 
-p8 <- ggplot(shrub.clim) + geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=16, alpha=0.5, data=subset(shrub.clim, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=17, alpha=0.5, data=subset(shrub.clim, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~x, aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="open"), lwd=2, lty=2) +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="shrub"), lwd=2)  + ylab("Soil compaction") + xlab("Gams index of continentality")+ annotate("text", x=63,y=1.1, label="d", size=8) 
+p8 <- ggplot(shrub.clim) + geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=16, alpha=0.5, data=subset(shrub.clim, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=17, alpha=0.5, data=subset(shrub.clim, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~x, aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="open"), lwd=2, lty=2) +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="shrub"), lwd=2)  + ylab(expression(bold("Soil compaction (kg/cm"*"2"^2*")"))) + xlab("Gams index of continentality")+ annotate("text", x=63,y=1.1, label="d", size=8) 
 
 grid.arrange(p5,p6,p7,p8)
 
@@ -909,7 +917,7 @@ p9 <- ggplot(census.micro, aes(x=species, y=Biomass, fill=Microsite)) +   geom_b
 ## nutrient average
 census.nut <- census.long %>% filter(biomass>0) %>%  group_by(Nutrient, species) %>%  summarize(Biomass=mean(biomass), error=se(biomass))
 
-p10 <- ggplot(census.nut, aes(x=species, y=Biomass, fill=Nutrient)) +   geom_bar(position=position_dodge(), stat="identity",colour="black") + scale_fill_brewer(palette="Greys")+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
+p10 <- ggplot(census.nut, aes(x=species, y=log(Biomass), fill=Nutrient)) +   geom_bar(position=position_dodge(), stat="identity",colour="black") + scale_fill_brewer(palette="Greys")+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
                   width=.2,                    # Width of the error bars
                   position=position_dodge(.9))+ theme_Publication()+ theme(axis.text.x = element_text(size=16, face="italic"),axis.text.y = element_text(size=16),axis.title = element_text(size=20),legend.text=element_text(size=18))
 
@@ -918,29 +926,29 @@ p10 <- ggplot(census.nut, aes(x=species, y=Biomass, fill=Nutrient)) +   geom_bar
 ## logistic first
 census.long[,"presence"] <- ifelse(census.long$biomass>0,1,0)
 ## Drop panoche 2017 because of cold
-census.npan <- census.long %>% filter(Site!="PanocheHills" | Year!="2017")
+census.npan <- census.long %>% filter(Site!="PanocheHills" | Year!="2017") 
 
 
-m1.l <- glmer(presence~Microsite * gams * Nutrient + (1|Year),data=subset(census.npan, species=="P. tanacetifolia"), family=binomial)
+m1.l <- glmer(presence~Microsite * gams * Nutrient + (1|Year),data=subset(census.npan, species=="P. tanacetifolia" & census=="end"), family=binomial)
 car::Anova(m1.l, type=2)
 
 
-m1 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. tanacetifolia" & presence==1))
+m1 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. tanacetifolia" & presence==1 ))
 shapiro.test(resid(m1))
 anova(m1)
 r.squaredGLMM(m1) ## R squared values 
 
 
+m2.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.npan, species=="P. insularis"  & census=="end"), family=binomial)
+car::Anova(m2.l, type=3)
 
-m2.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.npan, species=="P. insularis"), family=binomial)
-car::Anova(m2.l, type=2)
 m2 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year), data=subset(census.long, species=="P. insularis" & presence==1))
 shapiro.test(resid(m2))
 anova(m2)
 r.squaredGLMM(m2) ## R squared values 
 
-m3.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.npan, species=="S. columbariae"), family=binomial)
-car::Anova(m3.l, type=3)
+m3.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.npan, species=="S. columbariae" & census=="end"), family=binomial)
+car::Anova(m3.l, type=2)
 
 m3 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year), data=subset(census.long, species=="S. columbariae" & biomass>0))
 shapiro.test(resid(m3))
@@ -951,10 +959,12 @@ r.squaredGLMM(m3) ## R squared values
 ## summary presence
 mean.occ <- census.npan %>% group_by(gams,species, Microsite) %>% summarize(presence=mean(presence))
 
+## Revise to have end surveys only
+census.bin <- subset(census.npan, census=="end") 
 
 p11 <- ggplot(census.npan, aes(x=gams, y=presence, fill=species, color=species))  + theme_Publication()+  
   geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),fill="#0daec2", color="#0daec2",  data=subset(census.npan, species=="P. tanacetifolia" & Microsite=="shrub"), lwd=2)+  
-  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),fill="#0daec2", color="#0daec2",  data=subset(census.npan, species=="P. tanacetifolia"& Microsite=="open"), lwd=2, lty=2) +  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence), color="#fb6f70", fill="#fb6f7050",  data=subset(census.npan, species=="P. insularis"), lwd=2)+ geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence),fill="#b7d73850", color="#b7d738",  data=subset(census.npan, species=="S. columbariae"), lwd=2)+ ylab("Probability of occurrence") + xlab("Gams index of continentality")
+  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),fill="#0daec2", color="#0daec2",  data=subset(census.npan, species=="P. tanacetifolia"& Microsite=="open"), lwd=2, lty=2) +  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence), color="#fb6f70", fill="#fb6f7050",  data=subset(census.npan, species=="P. insularis"), lwd=2)+ geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence),fill="#b7d73850", color="#b7d738",  data=subset(census.npan, species=="S. columbariae"), lwd=2)+ ylab("Probability of occurrence") + xlab("")
 
 
 p12 <- ggplot(census.long, aes(x=gams, y=biomass, fill=species, color=species))  + theme_Publication() +  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)), color="#fb6f70", fill="#fb6f7050",  data=subset(census.long, species=="P. insularis" & biomass>0), lwd=2, fullrange=TRUE) + geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#b7d73850", color="#b7d738",  data=subset(census.long, species=="S. columbariae"& biomass>0), lwd=3)+
@@ -962,36 +972,39 @@ p12 <- ggplot(census.long, aes(x=gams, y=biomass, fill=species, color=species)) 
 
 
 grid.arrange(p9,p11,p10, p12)
+
+
+grid.arrange(p11,p12)
 ```
 
 ### Appendix A Fig1: Map
 ```{r message=FALSE, warning=FALSE}
 ## Load libraries
-library(ggmap)
-
-## load site info
-site <- c("PanocheHills","Cuyama","Barstow","HeartofMojave","SheepholeValley","Tecopa","TejonRanch")
-gradient <- c(1,2,5,4,6,7,3)
-lat <- c(36.70000998,34.85521998,35.094051,34.698199,34.205676,35.85151504,34.875994)
-lon <- c(-120.801116,-119.48851,-116.8349,-115.684169,-115.719676,-116.186706,-118.60246)
-elevation <- c(656.320862,806.83429,496.02,784.73,545.92,699.456665,1118.022)
-site.data <- data.frame(site, gradient, lat, lon, elevation)
-
-## identify site map
-cali.box <- c(-128, 34, -110, 38)
-
-## get map
-cali.map <- get_map(location=cali.box, source="google", maptype="terrain", crop=FALSE, color="bw")
-
-## plot map with locations
-ggmap(cali.map) + geom_point(aes(x=lon, y=lat), data=site.data, color="blue", size=4) + xlab("longitude") + ylab("latitude") +
-  annotate('text', x=lon[1]+.4, y=lat[1]+0.2, label = "Panoche Hills", colour = "blue") + #PAN
-  annotate('text', x=lon[2], y=lat[2]+0.17, label = "Cuyama Valley", colour = "blue") + #CUY
-  annotate('text', x=lon[3], y=lat[3]+0.18, label = "Barstow", colour = "blue") + #BAR
-  annotate('text', x=lon[4], y=lat[4]+0.18, label = "Heart of the Mojave", colour = "blue") + #MNP
-  annotate('text', x=lon[5], y=lat[5]+0.18, label = "Sheephole Valley Wilderness", colour = "blue") + #SVW
-  annotate('text', x=lon[6], y=lat[6]+0.18, label = "Tecopa", colour = "blue") + #TEC
-  annotate('text', x=lon[7], y=lat[7]+0.24, label = "Tejon Ranch", colour = "blue") #TJR
+# library(ggmap)
+# 
+# ## load site info
+# site <- c("PanocheHills","Cuyama","Barstow","HeartofMojave","SheepholeValley","Tecopa","TejonRanch")
+# gradient <- c(1,2,5,4,6,7,3)
+# lat <- c(36.70000998,34.85521998,35.094051,34.698199,34.205676,35.85151504,34.875994)
+# lon <- c(-120.801116,-119.48851,-116.8349,-115.684169,-115.719676,-116.186706,-118.60246)
+# elevation <- c(656.320862,806.83429,496.02,784.73,545.92,699.456665,1118.022)
+# site.data <- data.frame(site, gradient, lat, lon, elevation)
+# 
+# ## identify site map
+# cali.box <- c(-128, 34, -110, 38)
+# 
+# ## get map
+# cali.map <- get_map(location=cali.box, source="google", maptype="terrain", crop=FALSE, color="bw")
+# 
+# ## plot map with locations
+# ggmap(cali.map) + geom_point(aes(x=lon, y=lat), data=site.data, color="blue", size=4) + xlab("longitude") + ylab("latitude") +
+#   annotate('text', x=lon[1]+.4, y=lat[1]+0.2, label = "Panoche Hills", colour = "blue") + #PAN
+#   annotate('text', x=lon[2], y=lat[2]+0.17, label = "Cuyama Valley", colour = "blue") + #CUY
+#   annotate('text', x=lon[3], y=lat[3]+0.18, label = "Barstow", colour = "blue") + #BAR
+#   annotate('text', x=lon[4], y=lat[4]+0.18, label = "Heart of the Mojave", colour = "blue") + #MNP
+#   annotate('text', x=lon[5], y=lat[5]+0.18, label = "Sheephole Valley Wilderness", colour = "blue") + #SVW
+#   annotate('text', x=lon[6], y=lat[6]+0.18, label = "Tecopa", colour = "blue") + #TEC
+#   annotate('text', x=lon[7], y=lat[7]+0.24, label = "Tejon Ranch", colour = "blue") #TJR
 
 # ## plot worldclim data
 # library(raster)
@@ -1022,3 +1035,46 @@ ggmap(cali.map) + geom_point(aes(x=lon, y=lat), data=site.data, color="blue", si
 
 ```
 
+### Appendix - Microclimate over season
+```{r warning=FALSE, message=FALSE}
+##
+
+## calculate experimental day
+HOBO.season2 <- data.frame(HOBO.season)
+HOBO.season2[,"date"] <- as.Date(paste(HOBO.season$Year,HOBO.season$Month,HOBO.season$Day, sep="/"),"%Y/%m/%d")
+## season 1
+HOBO.season2[HOBO.season2$season=="season.1","exp.day"] <- as.numeric(HOBO.season2[HOBO.season2$season=="season.1","date"])-as.numeric(as.Date(c("2015/11/01"),"%Y/%m/%d"))
+## season 2
+HOBO.season2[HOBO.season2$season=="season.2","exp.day"] <- as.numeric(HOBO.season2[HOBO.season2$season=="season.2","date"])-as.numeric(as.Date(c("2016/11/01"),"%Y/%m/%d"))
+ HOBO.season2[HOBO.season2$Site=="TejonRanch" & HOBO.season2$season=="season.1"  & HOBO.season2$exp.day==151,"exp.day"] <- 14
+
+# ## Conert site names to deserts
+# desert <- data.frame(Site=unique(HOBO.season2$Site),desert=c("Mojave","San Joaquin","Mojave","San Joaquin","Mojave","Mojave","San Joaquin"))
+# desert.hobo <- merge(HOBO.season2,desert, by=c("Site"))
+
+
+## Temperature and humidity over years
+ggplot(HOBO.season2) + geom_line(aes(x=exp.day, y=Temp, col=Microsite)) + facet_grid(Site~season) + ylab("Temperature (C°)")+theme_Publication() + xlab("Experimental Day")
+
+ggplot(HOBO.season2) + geom_line(aes(x=exp.day, y=RH, col=Microsite)) + facet_grid(Site~season) + ylab("Relative Humidity (%)")+theme_Publication() + xlab("Experimental Day")
+
+
+#### weather patterns
+
+data <- read.table("Data/ERG.climatedata.csv", header=T,sep=",")
+site.names <- c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")
+season1 <- subset(data, year==2015 & month > 10 | year==2016 & month < 5)
+season2 <- subset(data, year==2016 & month > 10 | year==2017 & month < 5)
+data <- rbind(season1,season2)
+data[,"season"] <- c(rep("season.1",nrow(season1)),rep("season.2",nrow(season2)))
+data <- na.omit(data)
+
+## calculate experimental day
+data[,"Date"] <- as.Date(data$Date,"%m/%d/%Y")
+## season 1
+data[data$season=="season.1","exp.day"] <- as.numeric(data[data$season=="season.1","Date"])-as.numeric(as.Date(c("2015/11/01"),"%Y/%m/%d"))
+## season 2
+data[data$season=="season.2","exp.day"] <- as.numeric(data[data$season=="season.2","Date"])-as.numeric(as.Date(c("2016/11/01"),"%Y/%m/%d"))
+
+
+ggplot(data) + geom_bar(aes(x=exp.day, y=Precip), stat="identity") + facet_grid(Site~season) + ylab("Precipitation (mm)")+theme_Publication() + xlab("Experimental Day")
