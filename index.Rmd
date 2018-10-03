@@ -791,48 +791,11 @@ car::Anova(m2, type=2)
 
 # m2.gam <- gam(Richness~ Microsite +s(gams, k=3) + s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=poisson, data=community.arid)
 
-
-p1 <- ggplot(community.arid, aes(x=gams, y=Richness)) + geom_jitter(aes(x=gams, y=Richness), color="#181818", size=3, alpha=0.4, width = 0.75,shape = 1, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=Richness), color="#181818", size=2,alpha=0.4, data=subset(community.arid, Microsite=="open"),shape = 2, width = 0.75)  + theme_Publication() +
-  stat_smooth(method="gam", method.args=list(family="poisson"), formula= y~s,aes(x=gams, y=Richness), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)
-
-
-## richness
-p1 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=Richness), color="#181818", size=3, alpha=0.4, width = 0.75,shape = 1, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=Richness), color="#181818", size=2,alpha=0.4, data=subset(community.arid, Microsite=="open"),shape = 2, width = 0.75)  + theme_Publication() +  ylab("species richness") + xlab("Gams index of continentality")+ 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#181818", fill="#80808080" , data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Species richness") + xlab("") + annotate("text", x=50,y=6, label="a", size=8) 
-
-library(merTools)
-## richness with revised confidence band
-pred <- cbind(community.arid, predictInterval(m2, community.arid))
-
-p1 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=Richness, shape=Microsite),color="#181818", alpha=0.4,size=3, width= 0.75) + 
-  theme_Publication()+ ylab("Species richness") + xlab("") + annotate("text", x=50,y=6, label="a", size=8) + xlab("Gams index of continentality")+## aesthetics for graph
-   geom_ribbon(data= test, aes(x=gams, ymin = CI.low, ymax = CI.high, color=Microsite), size=2, alpha = 0.2, linetype = 0) +  geom_line(data= test, aes(gams, fit, lty = Microsite))
-
-test <- pred %>% group_by(gams, Microsite) %>% summarize(CI.high=mean(exp(upr)),CI.low=mean(exp(lwr)),fit=exp(mean(fit)))
-
-
-mm<-model.matrix(~gams*Microsite,community.arid)
-predFun<-function(.) exp(mm%*%fixef(.)) 
-bb<-bootMer(m2,FUN=predFun,nsim=200)
-bb_se<-apply(bb$t,2,function(x) x[order(x)])
-newdat$blo<-bb_se[1,]
-newdat$bhi<-bb_se[2,]
-
-
-  
-p1 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=Richness), color="#181818", size=3, alpha=0.4, width = 0.75,shape = 1, data=subset(community.arid, Microsite=="shrub"))+geom_jitter(aes(x=gams, y=Richness), color="#181818", size=2,alpha=0.4, data=subset(community.arid, Microsite=="open"),shape = 2, width = 0.75)+ theme_Publication() +  geom_line(data= pred, aes(gams, exp(fit), fill = Microsite)) +
- geom_ribbon(data= pred, aes(x=gams, ymin = lwr, ymax = upr,size=2, alpha = 0.5, linetype = 0)
-
 ## plot richness
 p1 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=Richness), color="#181818", size=3, alpha=0.4, width = 0.75,shape = 1, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=Richness), color="#181818", size=2,alpha=0.4, data=subset(community.arid, Microsite=="open"),shape = 2, width = 0.75)  + theme_Publication() +  ylab("species richness") + xlab("Gams index of continentality")+ 
   geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#181818", fill="#80808080" , data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
   geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Species richness") + xlab("") + annotate("text", x=50,y=6, label="a", size=8) 
 
-
-m3<- lmer(ihs(Biomass) ~ Microsite * poly(gams,2) + (1|Year), data=community.arid)
-anova(m3)
-r.squaredGLMM(m3) ## R squared values
 
 # m3.gam <- gam(ihs(Biomass)~  s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=gaussian, data=community.arid)
 # 
@@ -841,7 +804,7 @@ r.squaredGLMM(m3) ## R squared values
 p2 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=3, width = 0.75,shape = 1, alpha=0.5, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=2,shape = 2,alpha=0.5, width = 0.75, data=subset(community.arid, Microsite=="open"))  + theme_Publication() + 
   geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
   geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Annual biomass") + xlab("")+ annotate("text", x=50,y=5, label="b", size=8) 
-  
+
 
 m4<- lmer(mpd~ Microsite * gams + (1|Year), data=mpd.gams)
 anova(m4)
