@@ -803,7 +803,7 @@ p1 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=Richness), color="#1818
 ## biomass
 p2 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=3, width = 0.75,shape = 1, alpha=0.5, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=2,shape = 2,alpha=0.5, width = 0.75, data=subset(community.arid, Microsite=="open"))  + theme_Publication() + 
   geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
-  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Annual biomass") + xlab("")+ annotate("text", x=50,y=5, label="b", size=8) 
+  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Annual biomass") + xlab("")+ annotate("text", x=50,y=5, label="b", size=8) + xlab("Gradient of rainfall continentality")
 
 
 m4<- lmer(mpd~ Microsite * gams + (1|Year), data=mpd.gams)
@@ -836,7 +836,7 @@ p4 <- ggplot(subset(status.plot, abundance>0)) + geom_jitter(aes(x=gams, y=abund
   geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#181818",  data=subset(status.plot, Microsite=="shrub" & origin=="non.native"), lwd=2) +  ylab("Annual plant abundance") + xlab("Gradient of rainfall continentality")+ annotate("text", x=50,y=310, label="d", size=8) 
 
 
-grid.arrange(p1,p2,p3,p4)
+grid.arrange(p1,p2)
 
 
 ### Nutrients 
