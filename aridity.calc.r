@@ -8,11 +8,11 @@ pet <- raster("C:\\Users\\Fitz\\Downloads\\pet\\CRUpet.nc")
 
 pre <- raster("C:\\Users\\Fitz\\Downloads\\pre\\CRUpre.nc")
 
-r <- raster("C:\\Users\\Fitz\\Downloads\\pet\\CRUpet.nc", band = 64)
-as.character(r@z[[1]])
+r <- raster("C:\\Users\\Fitz\\Downloads\\pet\\CRUpet.nc", band = 58)
+r@z
 
 pet2016 <- stack()
-for(i in 53:64){
+for(i in 58:64){
   r <- raster("C:\\Users\\Fitz\\Downloads\\pet\\CRUpet.nc", band = i)
   names(r) <- paste0("pet",as.character(r@z[[1]]))
   pet2016 <- stack(pet2016, r)
@@ -20,7 +20,7 @@ for(i in 53:64){
 
 
 arid2016 <- stack()
-for(i in 53:64){
+for(i in 58:64){
   r1 <- raster("C:\\Users\\Fitz\\Downloads\\pet\\CRUpet.nc", band = i)
   names(r1) <- paste0("pet",as.character(r1@z[[1]]))
   r2 <- raster("C:\\Users\\Fitz\\Downloads\\pre\\CRUpre.nc", band = i)
@@ -57,7 +57,7 @@ for(i in 65:76){
 
 
 arid2016 <- stack()
-for(i in 53:64){
+for(i in 58:64){
   r1 <- raster("C:\\Users\\Fitz\\Downloads\\pet\\CRUpet.nc", band = i)
   names(r1) <- paste0("pet",as.character(r1@z[[1]]))
   r2 <- raster("C:\\Users\\Fitz\\Downloads\\pre\\CRUpre.nc", band = i)
@@ -68,7 +68,7 @@ for(i in 53:64){
 }
 
 arid2017 <- stack()
-for(i in 65:76){
+for(i in 70:76){
   r1 <- raster("C:\\Users\\Fitz\\Downloads\\pet\\CRUpet.nc", band = i)
   names(r1) <- paste0("pet",as.character(r1@z[[1]]))
   r2 <- raster("C:\\Users\\Fitz\\Downloads\\pre\\CRUpre.nc", band = i)
@@ -99,8 +99,8 @@ write.csv(sites, "Data//aridityCRU.csv", row.names = FALSE)
 
 
 ## arid values
-gps.2016 <- apply(extract(pre2016, gps), 1, mean)
-gps.2017 <- apply(extract(pre2017, gps), 1, mean)
+gps.2016 <- apply(raster::extract(pet2016, gps), 1, mean)
+gps.2017 <- apply(raster::extract(pre2016, gps), 1, mean)
 
 
 

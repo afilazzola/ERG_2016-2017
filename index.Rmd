@@ -88,7 +88,7 @@ return(return2)
 ```{r}
 arid <- read.csv("Data//aridityCRU.csv")
 
-arid <- data.frame(name=rep(arid$name,2),gradient=rep(arid$gradient,2), year=c(rep(2016,7),rep(2017,7)),aridity=c(arid$arid2016,arid$arid2017))
+arid <- data.frame(Site=rep(arid$name,2),gradient=rep(arid$gradient,2), year=c(rep(2016,7),rep(2017,7)),aridity=c(arid$arid2016,arid$arid2017))
 
 ```
 
@@ -330,19 +330,33 @@ plot(ord.env)
 
 ### Compare environmental differences - mixed model results
 ```{r warning= FALSE, message=FALSE}
+nutrient <- read.csv("Data//ERG.soilnutrients.csv")
+nutrient.mean <- nutrient %>% group_by(Site, microsite) %>% summarize(nitrogen=mean(N), phosphorus=mean(P), potassium=mean(K)) %>% data.frame(.)
 
-### Nutrients 
-nutrient.mean <- nutrients.climate %>% group_by(Site, microsite) %>% summarize(nitrogen=mean(N), phosphorus=mean(P), potassium=mean(K))
-nutrient.mean <- data.frame(nutrient.mean,gams=rep(gams.data[gams.data$Year==2016,"gams"],each=2))
+nutrient.arid <- merge(nutrient.mean, subset(arid, year==2016), by="Site" )
 
 ## potassium
-m5 <- lm(potassium ~ poly(gams,2)* microsite, data=nutrient.mean)
-summary(m5)
-anova(m5)
-r.squaredGLMM(m5) ## R squared values 
+m1 <- lm(potassium ~ aridity* microsite, data=nutrient.arid)
+summary(m1)
+anova(m1)
+r.squaredGLMM(m1) ## R squared values 
 
-p5 <- ggplot(nutrient.mean) + geom_jitter(aes(x=gams, y=potassium), color="#56B4E9", size=3, data=subset(nutrient.mean, microsite=="shrub"))+ geom_jitter(aes(x=gams, y=potassium), color="#E69F00", size=3, data=subset(nutrient.mean, microsite=="open"))+  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=potassium), color="#56B4E9", fill="#56B4E980", data=subset(nutrient.mean, microsite=="shrub"), lwd=1.4) +  
-  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=potassium), color="#E69F00", fill="#E69F0080",data=subset(nutrient.mean, microsite=="open"), lwd=1.4)+ ylab("Nitrogen (ppm)") + xlab("")+ theme_Publication()+ annotate("text", x=-4.5,y=32, label="a", size=8)+coord_cartesian(ylim=c(0, 32))
+## nitrogen
+m2 <- lm(nitrogen ~ aridity* microsite, data=nutrient.arid)
+summary(m2)
+anova(m2)
+r.squaredGLMM(m2) ## R squared values 
+
+## phosphorus
+m3 <- lm(phosphorus ~ poly(aridity,2)* microsite, data=nutrient.arid)
+summary(m3)
+anova(m3)
+r.squaredGLMM(m2) ## R squared values 
+
+ggplot(nutrient.arid) + geom_jitter(aes(x=aridity, y=potassium, color=microsite))
+
+p5 <- ggplot(nutrient.arid) + geom_jitter(aes(x=aridity, y=potassium), color="#56B4E9", size=3, data=subset(nutrient.arid, microsite=="shrub"))+ geom_jitter(aes(x=aridity, y=potassium), color="#E69F00", size=3, data=subset(nutrient.arid, microsite=="open"))+  stat_smooth(method="lm", formula= y~x,aes(x=aridity, y=potassium), color="#56B4E9", fill="#56B4E980", data=subset(nutrient.arid, microsite=="shrub"), lwd=1.4) +  
+  stat_smooth(method="lm", formula= y~x,aes(x=aridity, y=potassium), color="#E69F00", fill="#E69F0080",data=subset(nutrient.arid, microsite=="open"), lwd=1.4)+ ylab("Nitrogen (ppm)") + xlab("")+ theme_Publication()+ annotate("text", x=-4.5,y=32, label="a", size=8)+coord_cartesian(ylim=c(0, 32))
 
 
 
