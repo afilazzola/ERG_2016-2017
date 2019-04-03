@@ -84,11 +84,16 @@ return(return2)
 ```
 
 
-###  Load Aridity gradient
+### load GAMs Gradient
 ```{r}
-arid <- read.csv("Data//aridityCRU.csv")
+Year<-c("2016","2016","2016","2016","2016","2016","2016","2017","2017","2017","2017","2017","2017","2017")
+Site<-c("Barstow","Cuyama","HeartofMojave","PanocheHills","SheepholeValley","Tecopa","TejonRanch","Barstow","Cuyama","HeartofMojave","PanocheHills","SheepholeValley","Tecopa","TejonRanch")
+gamsq <-c(7992.36,6789.76,7903.21,5715.36,7779.24,7482.25,7447.69,6872.41,5882.89,7157.16,5595.04,7293.16,7106.49,6955.56)
+gams.richard <-c(89.4,82.4,88.9,75.6,88.2,86.5,86.3,82.9,76.7,84.6,74.8,85.4,84.3,83.4)
+gams <- c(89.6,71,84.7,62.7,88.3,80.6,80.7,63.6,51.4,73.4,49.5,69.4,68.3,65.8)
 
-arid <- data.frame(name=rep(arid$name,2),gradient=rep(arid$gradient,2), year=c(rep(2016,7),rep(2017,7)),aridity=c(arid$arid2016,arid$arid2017))
+gams.data <- data.frame(Year,Site,gamsq,gams)
+
 
 ```
 
@@ -121,9 +126,171 @@ colnames(precip) <- c("season","Gradient","Precip")
 
 p <-ggplot(precip, aes(Gradient, Precip, fill=season)) +geom_bar(stat = "identity", aes(fill = season), position = "dodge")+ scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0))+ylab("Precipitation (mm)") + theme_Publication()+ guides(fill = "none") 
 p
+
+### Calculate seasonal gams
+site.gps <- read.csv("Data/ERGsites.csv")
+names(site.gps)[1] <- "Site"
+
+## seasonal precipitation
+season.precip <- data %>% filter(month %in% c(12,1,2)) %>% group_by(Site,season) %>%  summarize(precip=sum(Precip))
+
+season.precip <- merge(site.gps, season.precip, by=c("Site"))
+season.precip$gams <- (season.precip$precip*4 - (900-season.precip$elevation)/100*(season.precip$precip*0.4))/season.precip$elevation
+season.precip$gams <- atan(season.precip$gams)
+
+```
+
+### Climate patterns within study
+```{r fid.height=20, fid.width=28, }
+season1.sjd <- season1 %>% filter(Gradient<4) %>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+season1.mnp <- season1 %>% filter(Gradient>3)%>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+season2.sjd <- season2 %>% filter(Gradient<4) %>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+season2.mnp <- season2 %>% filter(Gradient>3)%>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+
+## Rain vs Temperature in 2016
+par(mfrow=c(2,1))
+par(mar=c(3.5,4.5,1,4.5))
+plot1 <- barplot(height=season1.sjd$Precip, ylim=c(0,14), ylab="Average precipitation San Joaquin (cm)")
+points(plot1[,1], season1.sjd$min.temp, type="l", col="#FF000050", lwd=2)
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature at all sites (°C)", 4, line=3)
+par(mar=c(4.5,4.5,0,4.5))
+plot1 <- barplot(height=season1.mnp$Precip, ylim=c(0,14), ylab="Average precipitation Mojave (cm)")
+axis(1, plot1[c(1,30,60,90,120,150,180)], c("Nov","Dec","Jan","Feb","Mar","Apr","May"))
+points(plot1[,1], season1.mnp$min.temp, type="l", col="#FF000050", lwd=2)
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature at all sites (°C)", 4, line=3)
+
+
+## Rain vs Temperature in 2017
+par(mfrow=c(2,1))
+par(mar=c(3.5,4.5,1,4.5))
+plot2 <- barplot(height=season2.sjd$Precip, ylim=c(0,14), ylab="Average precipitation San Joaquin (cm)")
+points(plot2[,1], season2.sjd$min.temp, type="l", col="#FF000050", lwd=2)
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature San Joaquin (°C)", 4, line=3)
+par(mar=c(4.5,4.5,0,4.5))
+plot2 <- barplot(height=season2.mnp$Precip, ylim=c(0,14), ylab="Average precipitation Mojave (cm)")
+points(plot2[,1], season2.mnp$min.temp, type="l", col="#FF000050", lwd=2)
+axis(1, plot1[c(1,30,60,90,120,150,180)], c("Nov","Dec","Jan","Feb","Mar","Apr","May"))
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature Mojave (°C)", 4, line=3)
+
+### 2016 The rain was inconsistent and mostly absent in the Mojave. This resulted in low germination and producitivty at the southern sites
+### 2017 The rain was more plentiful, but in the northern sites, there appears to be a frost period after the majority of the rainfall. Need to check number of frost days
+
+season1.frost <- season1 %>% group_by(Site) %>% summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100)
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site) %>% summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100)
+data.frame(season2.frost)
+## Both years had comparable number of frost days
+
+## Compare number of consecutive frost days (i.e. frost periods)
+season1[,"frost"] <- ifelse(season1$min.temp<0, -99,season1$min.temp) ## identified days below freezing
+season2[,"frost"] <- ifelse(season2$min.temp<0, -99,season2$min.temp) ## identified days below freezing
+count.consec <- function(x) {max(rle(as.character(x))$lengths)}
+
+season1.frost <- season1 %>% group_by(Site)  %>% summarize(count.consec(frost))
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site) %>% summarize(count.consec(frost))
+data.frame(season2.frost)
+
+## compare only after plants have germinated
+season1.frost <- season1 %>% group_by(Site) %>% filter(year>2015) %>% summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100, avg.min.temp=mean(min.temp, na.rm=T))
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site) %>%  filter(year>2016) %>%  summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100,avg.min.temp=mean(min.temp, na.rm=T))
+data.frame(season2.frost)
+
+season1.frost <- season1 %>% group_by(Site)  %>% filter(year>2015) %>% summarize(count.consec(frost))
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site)  %>%  filter(year>2016)%>% summarize(count.consec(frost))
+data.frame(season2.frost)
+
 ```
 
 
+### Differences from Nutrient content
+```{r}
+# nutrient data for each site
+nutrients <- read.csv("Data/ERG.soilnutrients.csv")
+
+
+## join aridity with nutrients
+nutrients.climate <- merge(nutrients,subset(gams.data, Year==2016), by=c("Site"))
+
+
+## Nitrogen difference between shrub and sites
+m.nit <- aov(log(N) ~ Site * microsite, data=nutrients)
+summary(m.nit)
+TukeyHSD(m.nit, "microsite")
+
+## Potassium difference between shrub and sites
+m.pot <- aov(log(K) ~ Site * microsite, data=nutrients)
+summary(m.pot)
+TukeyHSD(m.pot, "microsite")
+
+## Phosphorus difference between shrub and sites
+m.pho <- aov(log(P) ~ Site * microsite, data=nutrients)
+summary(m.pho)
+TukeyHSD(m.pho, "microsite")
+
+nutrient.mean <- nutrients.climate %>% group_by(Site, gams) %>% summarize(nitrogen=mean(N), phosphorus=mean(P), potassium=mean(K))
+nutrient.mean <- data.frame(nutrient.mean)
+ 
+
+ggplot(nutrient.mean) + geom_jitter(aes(x=gams, y=nitrogen), color="#E69F00", size=3) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=nitrogen), color="#E69F00") + geom_jitter(aes(x=gams, y=potassium/20), color="#56B4E9", size=3) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=potassium/20), color="#56B4E9") + geom_jitter(aes(x=gams, y=phosphorus), color="#009E73", size=3) +ylab("soil nutrient content")+ theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),axis.line = element_line(colour = "black"),panel.background = element_blank(),axis.text=element_text(size=14),axis.title=element_text(size=16)) + xlab("rainfall continentality")+
+annotate("segment", x = 72, xend = 74, y = 25, yend = 25,  colour = "#56B4E9", size=2) + ## add custom legend
+  annotate("text", x = 65, y = 25,  label = "Nitrogen", size=5, hjust=0)+
+annotate("segment", x = 72, xend = 74, y = 23, yend = 23,  colour = "#E69F00", size=2) + ## add custom legend
+  annotate("text", x = 65, y = 23,  label = "Potassium", size=5, hjust=0)+
+annotate("segment", x = 72, xend = 74, y = 21, yend = 21,  colour = "#009E73", size=2) + ## add custom legend
+  annotate("text", x = 65, y = 21,  label = "Phosphorus", size=5, hjust=0)
+
+
+m1 <- lm(nitrogen~poly(gams,2), data=nutrient.mean)
+summary(m1)
+
+m2 <- lm(phosphorus~gams, data=nutrient.mean)
+summary(m2)
+
+m3 <- lm(potassium~poly(gams,2), data=nutrient.mean)
+summary(m3)
+
+```
+
+
+### Native non-native comparisons
+```{r}
+
+### annual plant community repsonse
+spp.data  <- read.csv("Data/ERG.communitydata.csv")
+spp.data[is.na(spp.data)] <- 0
+
+## load community data
+community <- read.csv("Data/ERG.communitydata.csv")
+community[is.na(community)] <- 0
+
+
+## load species list
+spp.list <- read.csv("Data/ERG.specieslist.csv")
+
+## convert data to long format
+status <- gather(community, species, abundance, 13:53)
+names(spp.list)[1] <- "species" ## rename species column for merge
+
+## combine native-non-native status with data set
+status <- merge(status, spp.list, by="species")
+
+## summarize per plot native and non-natives, convert back to wide format
+mean.status <- status %>% group_by(Year, Site, Microsite, Rep, status) %>% summarize(abundance=sum(abundance))
+mean.status <- spread(mean.status, status, abundance)
+status.data <- mean.status
+
+## calculate site means for native and non-native
+mean.status <- mean.status %>% group_by(Year, Site, Microsite) %>% summarize(native=mean(native), non.native=mean(non.native))
+
+
+```
 
 ### Phylogenetics
 ```{r warning=FALSE, message=FALSE}
@@ -192,7 +359,6 @@ mpd.rich <- merge(mpd.data, spp.rich, by=c("Site","Microsite","Year"))
 ```
 
 
-
 ### Community analysis
 ```{r warning=FALSE, message=FALSE}
 ### indicator species analysis
@@ -236,14 +402,24 @@ summary(indval)
 
 ```
 
-### Ordination Analysis
-
+### cluster analysis
 
 ```{r warning=FALSE, message=FALSE}
+library("cluster")
+library("factoextra")
+library("magrittr")
 
 comm.sum <- community %>%  group_by(Microsite, Site) %>% summarize_if(is.numeric, funs(sum))
 comm.sum <- data.frame(comm.sum)
 rownames(comm.sum) <- paste(comm.sum$Microsite,comm.sum$Site)
+
+## coreelation matrix
+
+### Distance measures
+res.dist <- get_dist(comm.sum[,13:53], stand = TRUE, method = "euclidean")
+fviz_dist(res.dist,    gradient = list(low = "#00AFBB", mid = "white", high = "#FC4E07"))
+
+## dendrogram
 
 ## transform data
 comm.trans <- decostand(comm.sum[,13:53], "hell")
@@ -265,6 +441,84 @@ avg.max <- function(x) {
   x[x==y] <- avg
   return(x)
 }
+#   
+# ## dot chart to find outliers (remove or Avg)
+# #dotchart(comm.trans$E.cicutarium) ## Erodium
+# comm.trans[,"E.cicutarium"] <- avg.max(comm.trans$E.cicutarium) ## removed outlier
+# #dotchart(comm.trans$A.wrangelianus) ## Chilean trefoil
+# comm.trans[,"A.wrangelianus"] <- NULL ## removed entire species
+# #dotchart(comm.trans$A.lentiginosus) ##
+# comm.trans[,"A.lentiginosus"] <- avg.max(comm.trans$A.lentiginosus) ## removed outlier
+# #dotchart(comm.trans$H.vulgare) ## Hordeum
+# comm.trans[,"H.vulgare"] <- NULL ## removed entire species
+# #dotchart(comm.trans$Pectocarya.spp) ## 
+# comm.trans[,"Pectocarya.spp"] <- avg.max(comm.trans$Pectocarya.spp) ## removed outlier
+# #dotchart(comm.trans$L.arizonicus) ## Lupin 
+# comm.trans[,"L.arizonicus"] <- NULL ## removed entire species
+# #dotchart(comm.trans$M.bellioides) ##
+# comm.trans[,"M.bellioides"] <- NULL ## removed entire species
+# #dotchart(comm.trans$B.nigra) ## Mustard
+# comm.trans[,"B.nigra"] <- NULL ## removed entire species
+# #dotchart(comm.trans$N.demissum) ## Sand Matt
+# comm.trans[,"N.demissum"] <- avg.max(comm.trans$N.demissum) ## removed outlier
+# #dotchart(comm.trans$L.gracilis) ## 
+# comm.trans[,"L.gracilis"] <- avg.max(comm.trans$L.gracilis) ## removed outlier
+# #dotchart(comm.trans$A.grandiflora) ##  Amsinckia
+# comm.trans[,"A.grandiflora"] <- NULL ## removed entire species
+# #dotchart(comm.trans$B.diandrus) ##  Bromus diandrus
+# comm.trans[,"B.diandrus"] <- NULL ## removed entire species
+# #dotchart(comm.trans$M.affinis) ##  
+# comm.trans[,"M.affinis"] <- NULL ## removed entire species
+# #dotchart(comm.trans$P.crenulata) ##  
+# comm.trans[,"P.crenulata"] <- NULL ## removed entire species
+# #dotchart(comm.trans$Erinoginum.spp) # buckwheat
+# comm.trans[,"Erinoginum.spp"] <- avg.max(comm.trans$Erinoginum.spp) ## removed outlier
+# #dotchart(comm.trans$C.lasiophyllus) # 
+# comm.trans[,"C.lasiophyllus"] <- NULL ## removed entire species
+
+# 
+# 
+# library(usdm)
+library(corrplot)
+# 
+# ## Check for collinearity
+# vifcor(comm.trans)
+# 
+# ## drop Claviformis because of collinear problems in P.insularis
+# comm.trans[,"C.claviformis"] <- NULL ## removed entire species
+# comm.trans[,"L.decorus"] <- NULL ## removed entire species
+# comm.trans[,"E.glyptosperma"] <- NULL ## removed entire species
+# comm.trans[,"E.wallacei"] <- NULL ## removed entire species
+
+# ## outliers removed
+# cor.dat <- cor(comm.trans[,1:20])
+# corrplot(cor.dat, method="number")
+
+
+## outliers left
+cor.dat <- cor(comm.trans[,1:35])
+corrplot(cor.dat, method="number")
+
+## calculate distances
+dis <- vegdist(comm.trans, method="bray")
+
+
+## cluster analysis
+clus <- hclust(dis, "ward.D2")
+
+## cluster colours
+colz <- c("#3e4444", "#86af49", "#405d27","#c1946a")
+
+fviz_dend(clus, k = 4, # Cut in four groups
+          cex = 0.7, cex.axis=2, # label size
+          k_colors = colz,
+          color_labels_by_k = TRUE, # color labels by groups
+          rect = TRUE # Add rectangle around groups
+          ) 
+
+grp <- cutree(clus, 4)
+
+## Interpretation of classes
 
 ## get soil moisture from site/microsite
 
@@ -326,7 +580,74 @@ plot(ord.env)
 
 ```
 
+### Short-term vs long-term effects
+[Repeated of analyses separating long- and short- term effects](longshort.effects.html)
 
+
+
+### Ordination including aridity and microsite (pCCA)
+
+[Partial Constrained Correspondence Analysis for community data](cca.analysis.html)
+
+### Compare Ambient Community - mixed model results
+```{r warning=FALSE, message=FALSE}
+
+community.arid <- merge(community, gams.data, by=c("Year","Site"))
+
+mean.spp <- community.arid %>% group_by(Microsite, Site, gams, Year) %>%  summarize(abd=mean(Abundance),rich=mean(Richness), bio=mean(Biomass))
+
+mean.status2 <- merge(mean.status,gams.data, by=c("Year","Site"))
+
+# m1 <- lmer(ihs(bio)~Microsite * gams + (1|Year), data=mean.spp)
+# shapiro.test(resid(m1))
+# anova(m1)
+# r.squaredGLMM(m1) ## R squared values 
+# 
+# m2 <- lmer(ihs(abd)~Microsite * gams + (1|Year), data=mean.spp)
+# shapiro.test(resid(m2))
+# car::Anova(m2, type=2)
+# r.squaredGLMM(m2) ## R squared values 
+# 
+# 
+# m2.nat <- lmer(ihs(native)~Microsite * poly(gams,2) + (1|Year), data=mean.status2)
+# shapiro.test(resid(m2.nat))
+# anova(m2.nat)
+# r.squaredGLMM(m2) ## R squared values 
+# 
+# m2.exo <- lmer(ihs(non.native)~Microsite * gams+ (1|Year), data=mean.status2)
+# shapiro.test(resid(m2.exo))
+# anova(m2.exo)
+# r.squaredGLMM(m2) ## R squared values 
+# 
+# 
+# m3 <- lmer(rich~Microsite * poly(gams,2) + (1|Year), data=mean.spp)
+# shapiro.test(resid(m3))
+# car::Anova(m3, type=2)
+# r.squaredGLMM(m3) ## R squared values 
+
+## Merge MPD with gams
+mpd.gams <- merge(mpd.rich, gams.data, by=c("Site","Year"))
+
+# m4 <- lmer(mpd~Microsite * gams + (1|Year), data=mpd.gams)
+# shapiro.test(resid(m4))
+# anova(m4)
+# r.squaredGLMM(m4) ## R squared values 
+# 
+# ### Biomass
+# p1 <- ggplot(mean.spp) + geom_jitter(aes(x=gams, y=ihs(bio)), color="#56B4E9", size=3, data=subset(mean.spp, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=ihs(bio)), color="#E69F00", size=3, data=subset(mean.spp, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,3),aes(x=gams, y=ihs(bio)), color="#E69F00", fill="#E69F0080", data=subset(mean.spp, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,3),aes(x=gams, y=ihs(bio)), color="#56B4E9", fill="#56B4E970", data=subset(mean.spp, Microsite=="shrub"), lwd=1.4)  + ylab("Annnual plant biomass")+ xlab("")  #annotate("text", x=-4.5,y=4, label="a", size=8)+coord_cartesian(ylim=c(0, 4))
+# 
+# ### abundance
+# p2 <- ggplot(mean.spp) + geom_jitter(aes(x=gams, y=ihs(abd)), color="#56B4E9", size=3, data=subset(mean.spp, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=ihs(abd)), color="#E69F00", size=3, data=subset(mean.spp, Microsite=="open"))  + theme_Publication()+  stat_smooth(method="lm", formula= ihs(y)~x,aes(x=gams, y=abd), color="black", fill="Grey50", data=mean.spp, lwd=1.4)+ ylab("Annual plant abundance")+ xlab("")+ annotate("text", x=-4.5,y=6, label="b", size=8)
+# 
+# ### richness
+# p3 <- ggplot(mean.spp) + geom_jitter(aes(x=gams, y=rich), color="#56B4E9", size=3, data=subset(mean.spp, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=rich), color="#E69F00", size=3, data=subset(mean.spp, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=rich), color="#E69F00", fill="#E69F0080", data=subset(mean.spp, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=rich), color="#56B4E9", fill="#56B4E970", data=subset(mean.spp, Microsite=="shrub"), lwd=1.4)  + ylab("Species richness") + xlab("Aridity Gradient")+ annotate("text", x=-4.5,y=4, label="c", size=8)
+# 
+# ### phylogenetic diveristy
+# p4 <- ggplot(mpd.gams)+ geom_jitter(aes(x=gams, y=mpd), color="#56B4E9", size=3, data=subset(mpd.gams, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=mpd), color="#E69F00", size=3, data=subset(mpd.gams, Microsite=="open"))  +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=mpd), data=subset(mpd.gams, Microsite=="shrub"), color="#56B4E9",fill="#56B4E980", lwd=1.4)+  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=mpd), data=subset(mpd.gams, Microsite=="open"), color="#E69F00",fill="#E69F0080", lwd=1.4)+ ylab("Phylogenetic Community Dissimilarity") + xlab("Aridity Gradient")+ theme_Publication()+ annotate("text", x=-4.5,y=1.8, label="d", size=8)
+# 
+# grid.arrange(p1,p2,p3,p4)
+
+```
 
 ### Compare environmental differences - mixed model results
 ```{r warning= FALSE, message=FALSE}
@@ -417,6 +738,49 @@ grid.arrange(p5,p6,p7,p8)
 
 ```
 
+
+
+```{r warning=FALSE, message=FALSE}
+### Microsite comparisons
+
+
+
+# nut <- read.csv("Data//ERG.soilnutrients.csv")
+# 
+# fit1 <- aovp(N ~ microsite, data=nut)
+# summary(fit1)
+# t.test(N ~ microsite, data=nut)
+# fit2 <- aovp(P ~ microsite, data=nut)
+# t.test(P ~ microsite, data=nut)
+# summary(fit2)
+# fit3 <- aovp(K ~ microsite, data=nut)
+# t.test(K ~ microsite, data=nut)
+# summary(fit3)
+# 
+# compact <- read.csv("Data//ERG.shrub.csv")
+# 
+# fit4 <- aovp(Compaction ~ Microsite, data=compact)
+# t.test(Compaction ~ Microsite, data=compact)
+# summary(fit4)
+# 
+# soilmoist <- read.csv("Data//ERG.phytometer.census.csv")
+# 
+# fit5 <- aovp(swc ~ Microsite, data=subset(soilmoist, Census=="emergence"))
+# summary(fit5)
+# t.test(swc ~ Microsite, data=subset(soilmoist, Census=="emergence"))
+# 
+# micro <- read.csv("Data//ERG.logger.data.csv")
+# 
+# micro.avg <- micro %>% group_by(Year, Site, Microsite, Rep) %>% summarize(temp=mean(Temp), rh=mean(RH))
+# 
+# fit6 <- aovp(temp ~ Microsite, data=micro.avg)
+# summary(fit6)
+# t.test(temp ~ Microsite, data=micro.avg)
+# 
+# fit7 <- aovp(rh ~ Microsite, data=micro.avg)
+# summary(fit7)
+# t.test(rh ~ Microsite, data=micro.avg)
+```
 
 ### Plot level GLMM
 ```{r warning=FALSE, message=FALSE}
@@ -531,7 +895,6 @@ grid.arrange(p5,p6,p7,p8)
 
 ```
 
-
 ### Phytometer with GAMS
 ```{r warning=FALSE, message=FALSE}
 census <- read.csv("Data/ERG.phytometer.census.csv")
@@ -615,3 +978,105 @@ grid.arrange(p9,p11,p10, p12)
 
 grid.arrange(p11,p12)
 ```
+
+### Appendix A Fig1: Map
+```{r message=FALSE, warning=FALSE}
+## Load libraries
+# library(ggmap)
+# 
+# ## load site info
+# site <- c("PanocheHills","Cuyama","Barstow","HeartofMojave","SheepholeValley","Tecopa","TejonRanch")
+# gradient <- c(1,2,5,4,6,7,3)
+# lat <- c(36.70000998,34.85521998,35.094051,34.698199,34.205676,35.85151504,34.875994)
+# lon <- c(-120.801116,-119.48851,-116.8349,-115.684169,-115.719676,-116.186706,-118.60246)
+# elevation <- c(656.320862,806.83429,496.02,784.73,545.92,699.456665,1118.022)
+# site.data <- data.frame(site, gradient, lat, lon, elevation)
+# 
+# ## identify site map
+# cali.box <- c(-128, 34, -110, 38)
+# 
+# ## get map
+# cali.map <- get_map(location=cali.box, source="google", maptype="terrain", crop=FALSE, color="bw")
+# 
+# ## plot map with locations
+# ggmap(cali.map) + geom_point(aes(x=lon, y=lat), data=site.data, color="blue", size=4) + xlab("longitude") + ylab("latitude") +
+#   annotate('text', x=lon[1]+.4, y=lat[1]+0.2, label = "Panoche Hills", colour = "blue") + #PAN
+#   annotate('text', x=lon[2], y=lat[2]+0.17, label = "Cuyama Valley", colour = "blue") + #CUY
+#   annotate('text', x=lon[3], y=lat[3]+0.18, label = "Barstow", colour = "blue") + #BAR
+#   annotate('text', x=lon[4], y=lat[4]+0.18, label = "Heart of the Mojave", colour = "blue") + #MNP
+#   annotate('text', x=lon[5], y=lat[5]+0.18, label = "Sheephole Valley Wilderness", colour = "blue") + #SVW
+#   annotate('text', x=lon[6], y=lat[6]+0.18, label = "Tecopa", colour = "blue") + #TEC
+#   annotate('text', x=lon[7], y=lat[7]+0.24, label = "Tejon Ranch", colour = "blue") #TJR
+
+# ## plot worldclim data
+# library(raster)
+# library(sp)
+# 
+# ## get worldclim variables
+# cal1 <- getData("worldclim",var="bio", lon=-118, lat=35, res=0.5) ## right side of California 
+# cal2 <- getData("worldclim",var="bio", lon=-122, lat=35, res=0.5) ## left side of california
+# cal.all <- merge(cal1,cal2)
+# cal.all <- cal.all[[c(12)]]
+# names(cal.all) <- c("Prec")
+# 
+# ## convert sites to spatial points 
+# coordinates(site.data) <- ~lon+lat
+# proj4string(site.data) <- cal.all@crs
+# 
+# ## plot points and precipitation maps
+# par(mar=c(4.5,4.5,0.5,0.5))
+# plot(cal.all, xlim=c(-122,-114), ylim=c(34,38), xlab="longitude", ylab="latitude", cex.lab=1.5, cex.axis=1.3)
+# plot(site.data,add=T, pch=19, col="blue", cex=2)
+# text(lon[1],lat[1]+0.2, "Panoche Hills", col="blue", cex=1)
+# text(lon[2],lat[2]+0.17, "Cuyama Valley", col="blue", cex=1)
+# text(lon[3],lat[3]+0.2, "Barstow", col="blue", cex=1)
+# text(lon[4],lat[4]+0.2, "Heart of the Mojave", col="blue", cex=1)
+# text(lon[5],lat[5]+0.2, "Sheephole Valley Wilderness", col="blue", cex=1)
+# text(lon[6],lat[6]+0.2, "Tecopa", col="blue", cex=1)
+# text(lon[7],lat[7]+0.25, "Tejon Ranch", col="blue", cex=1)
+
+```
+
+### Appendix - Microclimate over season
+```{r warning=FALSE, message=FALSE}
+##
+
+## calculate experimental day
+HOBO.season2 <- data.frame(HOBO.season)
+HOBO.season2[,"date"] <- as.Date(paste(HOBO.season$Year,HOBO.season$Month,HOBO.season$Day, sep="/"),"%Y/%m/%d")
+## season 1
+HOBO.season2[HOBO.season2$season=="season.1","exp.day"] <- as.numeric(HOBO.season2[HOBO.season2$season=="season.1","date"])-as.numeric(as.Date(c("2015/11/01"),"%Y/%m/%d"))
+## season 2
+HOBO.season2[HOBO.season2$season=="season.2","exp.day"] <- as.numeric(HOBO.season2[HOBO.season2$season=="season.2","date"])-as.numeric(as.Date(c("2016/11/01"),"%Y/%m/%d"))
+ HOBO.season2[HOBO.season2$Site=="TejonRanch" & HOBO.season2$season=="season.1"  & HOBO.season2$exp.day==151,"exp.day"] <- 14
+
+# ## Conert site names to deserts
+# desert <- data.frame(Site=unique(HOBO.season2$Site),desert=c("Mojave","San Joaquin","Mojave","San Joaquin","Mojave","Mojave","San Joaquin"))
+# desert.hobo <- merge(HOBO.season2,desert, by=c("Site"))
+
+
+## Temperature and humidity over years
+ggplot(HOBO.season2) + geom_line(aes(x=exp.day, y=Temp, col=Microsite)) + facet_grid(Site~season) + ylab("Temperature (C°)")+theme_Publication() + xlab("Experimental Day")
+
+ggplot(HOBO.season2) + geom_line(aes(x=exp.day, y=RH, col=Microsite)) + facet_grid(Site~season) + ylab("Relative Humidity (%)")+theme_Publication() + xlab("Experimental Day")
+
+
+#### weather patterns
+
+data <- read.table("Data/ERG.climatedata.csv", header=T,sep=",")
+site.names <- c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")
+season1 <- subset(data, year==2015 & month > 10 | year==2016 & month < 5)
+season2 <- subset(data, year==2016 & month > 10 | year==2017 & month < 5)
+data <- rbind(season1,season2)
+data[,"season"] <- c(rep("season.1",nrow(season1)),rep("season.2",nrow(season2)))
+data <- na.omit(data)
+
+## calculate experimental day
+data[,"Date"] <- as.Date(data$Date,"%m/%d/%Y")
+## season 1
+data[data$season=="season.1","exp.day"] <- as.numeric(data[data$season=="season.1","Date"])-as.numeric(as.Date(c("2015/11/01"),"%Y/%m/%d"))
+## season 2
+data[data$season=="season.2","exp.day"] <- as.numeric(data[data$season=="season.2","Date"])-as.numeric(as.Date(c("2016/11/01"),"%Y/%m/%d"))
+
+
+ggplot(data) + geom_bar(aes(x=exp.day, y=Precip), stat="identity") + facet_grid(Site~season) + ylab("Precipitation (mm)")+theme_Publication() + xlab("Experimental Day")

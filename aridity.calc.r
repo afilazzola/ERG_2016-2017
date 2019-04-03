@@ -96,3 +96,14 @@ sites[,"arid2017"] <- gps.2017
 
 write.csv(sites, "Data//aridityCRU.csv", row.names = FALSE)
 
+
+
+## arid values
+gps.2016 <- apply(extract(pre2016, gps), 1, mean)
+gps.2017 <- apply(extract(pre2017, gps), 1, mean)
+
+
+
+sites[,"pre2016"] <- gps.2016
+sites[,"pre2017"] <- gps.2017
+
