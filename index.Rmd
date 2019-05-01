@@ -84,13 +84,22 @@ return(return2)
 ```
 
 
-###  Load Aridity gradient
+###  Load datasets
 ```{r}
-arid <- read.csv("Data//aridityCRU.csv")
+## Load Aridity gradient
+source("continentality.r") ## arid
 
-arid <- data.frame(Site=rep(arid$name,2),gradient=rep(arid$gradient,2), year=c(rep(2016,7),rep(2017,7)),aridity=c(arid$arid2016,arid$arid2017))
 
+## Load surveyed data
+nutrient <- read.csv("Data//ERG.soilnutrients.csv")
+community <- read.csv("Data//ERG.communitydata.csv")
+community[is.na(community)] <- 0
+census <-  read.csv("Data//ERG.phytometer.census.csv")
+HOBOdata <- read.csv("Data//ERG.logger.data.csv")
+sitevars <- read.csv("Data//ERG.shrub.csv")
 ```
+
+
 
 ### Weather for growing season
 ```{r echo=FALSE, fid.width=28, warning=FALSE, message=FALSE}
@@ -188,6 +197,7 @@ spp.rich <- data.frame(spp.rich)
 
 ## join data
 mpd.rich <- merge(mpd.data, spp.rich, by=c("Site","Microsite","Year"))
+
 
 ```
 
@@ -333,7 +343,7 @@ plot(ord.env)
 nutrient <- read.csv("Data//ERG.soilnutrients.csv")
 nutrient.mean <- nutrient %>% group_by(Site, microsite) %>% summarize(nitrogen=mean(N), phosphorus=mean(P), potassium=mean(K)) %>% data.frame(.)
 
-nutrient.arid <- merge(nutrient.mean, subset(arid, year==2016), by="Site" )
+nutrient.arid <- merge(nutrient.mean, subset(arid, Year==2016), by="Site" )
 
 ## potassium
 m1 <- lm(potassium ~ aridity* microsite, data=nutrient.arid)
@@ -348,7 +358,7 @@ anova(m2)
 r.squaredGLMM(m2) ## R squared values 
 
 ## phosphorus
-m3 <- lm(phosphorus ~ poly(aridity,2)* microsite, data=nutrient.arid)
+m3 <- lm(phosphorus ~ aridity* microsite, data=nutrient.arid)
 summary(m3)
 anova(m3)
 r.squaredGLMM(m2) ## R squared values 
@@ -362,22 +372,22 @@ p5 <- ggplot(nutrient.arid) + geom_jitter(aes(x=aridity, y=potassium), color="#5
 
 se <- function(x) sd(na.omit(x))/sqrt(length(na.omit(x)))
 
-swc <- smc %>% group_by(Year, Site, Microsite, Census) %>% summarize(swc.avg=mean(swc), swc.se=se(swc))
-smc.gams <- merge(swc, gams.data, by=c("Site","Year"))
+swc <- census %>% group_by(Year, Site, Microsite, Census) %>% summarize(swc.avg=mean(swc), swc.se=se(swc))
+smc.arid <- merge(swc, arid, by=c("Site","Year"))
 
 
 ## early swc
 smc.early <- subset(smc.gams, Census=="emergence")
 
 
-m6 <- lmer(swc.avg~Microsite * poly(gams,2) + (1|Year), data=smc.early)
+m6 <- lmer(swc.avg~Microsite * aridity + (1|Year), data=smc.early)
 shapiro.test(resid(m6))
 anova(m6)
 r.squaredGLMM(m6) ## R squared values 
 
 
 ### soil moisture at emergence
-p6 <- ggplot(smc.early) + geom_jitter(aes(x=gams, y=swc.avg), color="#56B4E9", size=3, data=subset(smc.early, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=swc.avg), color="#E69F00", size=3, data=subset(smc.early, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=swc.avg), data=smc.early, lwd=1.4, color="black") + ylab("Soil moisture at emergence (%)") + xlab("Aridity Gradient")+ annotate("text", x=-4.5,y=30, label="c", size=8)
+p6 <- ggplot(smc.early) + geom_jitter(aes(x=aridity, y=swc.avg), color="#56B4E9", size=3, data=subset(smc.early, Microsite=="shrub")) +geom_jitter(aes(x=aridity, y=swc.avg), color="#E69F00", size=3, data=subset(smc.early, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=aridity, y=swc.avg), data=smc.early, lwd=1.4, color="black") + ylab("Soil moisture at emergence (%)") + xlab("Aridity Gradient")+ annotate("text", x=0,y=30, label="c", size=8)
 
 
 ## Create seasons for hobo
@@ -434,23 +444,25 @@ grid.arrange(p5,p6,p7,p8)
 
 ### Plot level GLMM
 ```{r warning=FALSE, message=FALSE}
+community.arid <- merge(community, arid, by=c("Site","Year"))
 
-m1 <- glmer.nb(Abundance ~ Microsite * gams + (1|Year), data=community.arid)
+
+m1 <- glmer.nb(Abundance ~ Microsite * aridity + (1|Year), data=community.arid)
 car::Anova(m1, type=2)
 coef(m1)
 
 source("rsquared.r")
 
-m2 <- glmer.nb(Richness ~ Microsite * poly(gams,2) + (1|Year), data=community.arid)
+m2 <- glmer.nb(Richness ~ Microsite * poly(aridity,2) + (1|Year), data=community.arid)
 car::Anova(m2, type=2)
 # rsquared.glmm(m2)
 
 # m2.gam <- gam(Richness~ Microsite +s(gams, k=3) + s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=poisson, data=community.arid)
 
 ## plot richness
-p1 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=Richness), color="#181818", size=3, alpha=0.4, width = 0.75,shape = 1, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=Richness), color="#181818", size=2,alpha=0.4, data=subset(community.arid, Microsite=="open"),shape = 2, width = 0.75)  + theme_Publication() +  ylab("species richness") + xlab("Gams index of continentality")+ 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#181818", fill="#80808080" , data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=gams, y=Richness), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Species richness") + xlab("") + annotate("text", x=50,y=6, label="a", size=8) 
+p1 <- ggplot(community.arid) + geom_jitter(aes(x=aridity, y=Richness), color="#181818", size=3, alpha=0.4, width = 0.75,shape = 1, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=aridity, y=Richness), color="#181818", size=2,alpha=0.4, data=subset(community.arid, Microsite=="open"),shape = 2, width = 0.75)  + theme_Publication() +  ylab("species richness") + xlab("Gams index of continentality")+ 
+  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=aridity, y=Richness), color="#181818", fill="#80808080" , data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
+  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=aridity, y=Richness), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Species richness") + xlab("") + annotate("text", x=15,y=6, label="a", size=8) 
 
 
 # m3.gam <- gam(ihs(Biomass)~  s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=gaussian, data=community.arid)
