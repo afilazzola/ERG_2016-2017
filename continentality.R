@@ -6,8 +6,8 @@ library(tidyverse)
 clim <- read.csv("Data//ERG.climatedata.csv")
 
 ## generate seasons
-season1 <- subset(clim, year==2015 & month > 10 | year==2016 & month < 5)
-season2 <- subset(clim, year==2016 & month > 10 | year==2017 & month < 5)
+season1 <- subset(clim, year==2015 & month > 9 | year==2016 & month < 5)
+season2 <- subset(clim, year==2016 & month > 9 | year==2017 & month < 5)
 clim <- rbind(season1,season2)
 clim[,"season"] <- c(rep("season.1",nrow(season1)),rep("season.2",nrow(season2)))
 
