@@ -167,12 +167,35 @@ car::Anova(m2.occ, test="Chisq")
 m2.bio <- lmer(log(Plantago.biomass) ~ poly(aridity,2) * Microsite * Nutrient + (1|Year), data=subset(phyto, pla.occ==1))
 anova(m2.bio, test="Chisq")
 
+## calcualte partial coefficents and confidence interval
+ee <- Effect(c("aridity", "Microsite"), m2.occ, xlevels=list(aridity=0:11))
+
+
+## abundance of natives
+plot1 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab(expression(italic("P. insularis")*"occurrence"))+
+   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+
+  annotate("text", x=0,y=.6, label="a", size=8) 
+
+
+
 ## Salvia occurrence
 m3.occ <- glmer(sal.occ ~ poly(aridity,2) * Microsite * Nutrient + (1|Year), data=phyto, family="binomial")
 car::Anova(m3.occ, test="Chisq")
 ## Salvia Biomass
 m3.bio <- lmer(log(Salvia.biomass) ~ poly(aridity,2) * Microsite * Nutrient + (1|Year), data=subset(phyto, sal.occ==1))
 anova(m3.bio, test="Chisq")
+
+## calcualte partial coefficents and confidence interval
+ee <- Effect(c("aridity","Nutrient"), m3.bio, xlevels=list(aridity=0:11))
+
+plot2 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Nutrient)) + theme_Publication() +ylab(expression(italic("S. columbariae")*"biomass")) +
+  geom_jitter(data=phyto, aes(x=aridity, y=log(Salvia.biomass), color=Nutrient), size=2, width = 0.2, alpha=0.4) +
+  geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Nutrient), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+
+   annotate("text", x=0,y=1, label="b", size=8)
+
+grid.arrange(plot1, plot2, nrow=2)
 
 
 ### abiotic characteristics
@@ -235,9 +258,9 @@ hoboArid <- merge(data, arid[,c("season","aridity","Site")], by=c("season","Site
 
 dailyAvg <- function(x) { (max(x) + min(x))/2}
 
-daily <- hoboArid %>% group_by(season, Site, Microsite, aridity, Year, Month, Day) %>% summarize(vpd=mean(VPD),tempDaily=dailyAvg(Temp),tempVar=var(Temp))
-siteAvg <- daily %>% group_by(season, aridity,Microsite, Site) %>% 
-  summarize(VPD = mean(vpd), temp=mean(tempDaily),vartemp = mean(tempVar))
+daily <- hoboArid %>% group_by(season, Site, Microsite, aridity, Rep, Year, Month, Day) %>% summarize(vpd=mean(VPD),tempDaily=dailyAvg(Temp),tempVar=var(Temp, na.rm=T))
+siteAvg <- daily %>% group_by(season, aridity,Microsite, Site, Rep) %>% 
+  summarize(VPD = mean(vpd), temp=mean(tempDaily),vartemp = mean(tempVar, na.rm=T))
 
 siteAvg$season <- as.factor(siteAvg$season)
 
@@ -270,7 +293,7 @@ ee <- Effect(c("aridity"), m2, xlevels=list(aridity=1:11))
 plot2 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit)) + theme_Publication() + ylab("temperature variation")+
   geom_jitter(data=siteAvg, aes(x=aridity, y=vartemp, color=Microsite), size=2, width = 0.2, alpha=0.4) +
   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper), alpha=0.3, color=NA) + 
-  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9")) +ylim(0,80)
 
 ### swc
 
@@ -291,3 +314,78 @@ ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_P
   scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
 
 grid.arrange(plot1, plot2, plot3, nrow=3)
+
+
+
+
+
+### Ordination Analysis
+
+
+comm.sum <- community %>%  group_by(Year, Microsite, Site) %>% summarize_if(is.numeric, funs(sum))
+comm.sum <- data.frame(comm.sum)
+commSum <- merge(comm.sum, arid, by=c("Year","Site"))
+
+## transform data
+comm.trans <- decostand(commSum[,13:53], "hell")
+
+## clean data for ordination
+## see distribution of spp
+boxplot(comm.trans, xaxt="n")
+labs <- colnames(comm.trans)
+text(cex=0.8, x=1:41-1, y=-0.12, labs, xpd=TRUE, srt=45)
+
+## remove spp with only one instance
+comm.trans <- comm.trans[,!colSums(comm.trans)==apply(comm.trans, 2, max)]
+
+commTrans <- comm.trans[rowSums(comm.trans)!=0,]
+commSum <- commSum[rowSums(comm.trans)!=0,]
+
+## CA or PCA
+dca1 <- decorana(commTrans) ## length of gradient >2 & determine relative differences in community composition 
+
+
+
+## conduct ordination
+ord <- cca(commTrans ~ Microsite + aridity, z=Year, data=commSum)
+summary(ord)
+
+
+## calculate priority
+spp.priority <- colSums(commTrans)
+
+## plot ordination
+par(mar=c(4.5,4.5,0.5,0.5))
+plot(ord, type="n", xlab="CA1 (35.7%)", ylab="CA2 (16.6%)", xlim=c(-2,2))
+orditorp(ord, display = "species", cex = 0.7, col = "darkorange3", priority=spp.priority, air=0.5)
+orditorp(ord, display = "sites", cex = 0.7, col = "darkslateblue", air=0.1)
+
+
+##collect environmental variables for site
+nutrients <- read.csv("Data/ERG.soilnutrients.csv")
+nutrients.mean <- nutrients %>% group_by(microsite, Site) %>% summarise_all(funs(mean))
+nutrients.vars <- data.frame(nutrients.mean)
+
+
+## summarize daily means across sites
+HOBO <- read.csv("Data/ERG.logger.data.csv")
+HOBO.data <- HOBO %>%  group_by(Site, Microsite, Year, Month, Day) %>% summarize(temp.var=var(Temp),Temp=mean(Temp),RH=mean(RH))
+
+means <- HOBO.data %>% group_by(Microsite, Site) %>% summarize(Temp.=mean(Temp, na.rm=T),rh=mean(RH, na.rm=T),temp.se=se(Temp),rh.se=se(RH))
+means <- data.frame(means)
+
+## soil moisture
+smc.early <- subset(smc, Census=="emergence")
+smc.avg <- smc.early %>% group_by(Microsite, Site) %>% summarize(SMC=mean(swc, na.rm=T))
+
+envs <- data.frame(swc=smc.avg[,"SMC"],nutrients.vars[,c("N","P","K")], means[,c("Temp.","rh")])
+
+## Check for collinearity
+cor(envs)
+envs[,"K"] <- NULL ## drop potassium for being correlated
+envs[,"rh"] <- NULL ## drop humidity for being correlated
+
+ord.env <- envfit(ord, envs)
+plot(ord.env)
+
+```

@@ -301,7 +301,7 @@ spp.priority <- colSums(comm.trans)
 
 ## plot ordination
 par(mar=c(4.5,4.5,0.5,0.5))
-plot(ord, type="n")
+plot(ord, type="n", xlab="CA1 (35.7%)", ylab="CA2 (16.6%)", xlim=c(-2,2))
 ordiellipse(ord, grp, lty = 2, col = "grey80", draw="polygon", alpha=150)
 orditorp(ord, display = "species", cex = 0.7, col = "darkorange3", priority=spp.priority, air=0.8)
 orditorp(ord, display = "sites", cex = 0.7, col = "darkslateblue", air=0.1)
