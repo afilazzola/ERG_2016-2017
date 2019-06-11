@@ -225,7 +225,8 @@ plot3 <- ggplot(data=nutArid, aes(x=aridity, y= log(P), color=microsite)) +
   theme_Publication() + ylab("phosphorus (ppm)")+
   geom_jitter(size=2, width = 0.2, alpha=0.4) + 
   geom_smooth(method="lm", lwd=2, formula= y ~ poly(x,2)) +
-  scale_color_manual(values=c("#E69F00", "#56B4E9")) 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) +
+  annotate("text", x=10,y=4, label="c", size=8)
 
 
 m3 <- lm(log(K) ~ microsite * poly(aridity,1), data=nutArid)
@@ -277,7 +278,8 @@ ee <- Effect(c("aridity"), m1, xlevels=list(aridity=1:11))
 plot1 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit)) + theme_Publication() + ylab("Vapour pressure deficit")+
   geom_jitter(data=siteAvg, aes(x=aridity, y=VPD, color=Microsite), size=2, width = 0.2, alpha=0.4) +
   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper), alpha=0.3, color=NA) + 
-  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9")) + 
+  annotate("text", x=10,y=1.5, label="a", size=8)
 
 ## Temperature variation
 m2 <- lmer(vartemp ~ Microsite * aridity + (1|season), data=siteAvg)
@@ -293,7 +295,8 @@ ee <- Effect(c("aridity"), m2, xlevels=list(aridity=1:11))
 plot2 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit)) + theme_Publication() + ylab("temperature variation")+
   geom_jitter(data=siteAvg, aes(x=aridity, y=vartemp, color=Microsite), size=2, width = 0.2, alpha=0.4) +
   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper), alpha=0.3, color=NA) + 
-  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9")) +ylim(0,80)
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9")) +ylim(0,80) +
+  annotate("text", x=10,y=80, label="b", size=8)
 
 ### swc
 
@@ -308,12 +311,32 @@ r.squared(m3)
 ee <- Effect(c("aridity","Microsite"), m3, xlevels=list(aridity=1:11))
 
 ## Temp Var
-ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("Vapour pressure deficit")+
+ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("vapour pressure deficit")+
   geom_jitter(data=endArid, aes(x=aridity, y=log(swc+1), color=Microsite), size=2, width = 0.2, alpha=0.4) +
   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
 
-grid.arrange(plot1, plot2, plot3, nrow=3)
+
+## soil compaction
+siteArid <- merge(sitevars, subset(arid, Year==2017), by="Site")
+
+m4 <- lm(log(Compaction+1) ~ aridity * Microsite,  data=siteArid)
+anova(m4)
+shapiro.test(residuals(m4))
+r.squared(m4)
+
+
+ee <- Effect(c("aridity","Microsite"), m4, xlevels=list(aridity=1:11))
+
+## soil compaction
+plot4 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab(expression("soil compaction (kg / cm"^2*")"))+
+  geom_jitter(data=siteArid, aes(x=aridity, y=log(Compaction+1), color=Microsite), size=2, width = 0.3, alpha=0.4) +
+  geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+
+  annotate("text", x=10,y=1.8, label="d", size=8)
+
+
+grid.arrange(plot1, plot2, plot3, plot4, nrow=2)
 
 
 
@@ -347,18 +370,25 @@ dca1 <- decorana(commTrans) ## length of gradient >2 & determine relative differ
 
 
 ## conduct ordination
-ord <- cca(commTrans ~ Microsite + aridity, z=Year, data=commSum)
+ord <- cca(commTrans ~ Microsite + aridity, Z = Year, data=commSum)
 summary(ord)
 
+RsquareAdj(ord)
 
 ## calculate priority
 spp.priority <- colSums(commTrans)
 
+## native status
+colnative <- merge( data.frame(Species.shorthand = names(commTrans)), status, by="Species.shorthand", sort=FALSE)
+colnative[,"color"] <- ifelse(colnative$status=="native", "darkorange3", "red3")
+
+
+
 ## plot ordination
 par(mar=c(4.5,4.5,0.5,0.5))
-plot(ord, type="n", xlab="CA1 (35.7%)", ylab="CA2 (16.6%)", xlim=c(-2,2))
-orditorp(ord, display = "species", cex = 0.7, col = "darkorange3", priority=spp.priority, air=0.5)
-orditorp(ord, display = "sites", cex = 0.7, col = "darkslateblue", air=0.1)
+plot(ord, type="n", xlab="CCA1", ylab="CCA2", xlim=c(-2,2))
+orditorp(ord, display = "species", cex = 0.7, col = colnative[,"color"], priority=spp.priority, air=0.5)
+orditorp(ord, display = "sites", cex = 1, col = "darkslateblue", air=30, pch=2)
 
 
 ##collect environmental variables for site
