@@ -57,10 +57,11 @@ ee <- Effect(c("aridity", "Microsite"), m1, xlevels=list(aridity=1:11))
 
 ## Plot Biomass
 plot1 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite))+ 
-  geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=log(Biomass), color=Microsite), size=2, width = 0.2, alpha=0.6) + theme_Publication() + ylab("log-transformed biomass")+
+  geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=log(Biomass), color=Microsite), size=2, width = 0.2, alpha=1) + theme_Publication() + ylab("log-transformed biomass")+
    geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol)) +
-  annotate("text", x=1,y=4, label="a", size=8)
+  annotate("text", x=1,y=4, label="a", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))
 
 
 ## species richness model
@@ -74,10 +75,11 @@ ee <- Effect(c("aridity", "Microsite"), m2, xlevels=list(aridity=1:11))
 
 ## Plot richness
 plot2 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("species richness")+
-   geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=Richness, color=Microsite), size=2, width = 0.2, alpha=0.6) +
+   geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=Richness, color=Microsite), size=2, width = 0.2, alpha=1) +
   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
-  annotate("text", x=1,y=6, label="b", size=8)
+  annotate("text", x=1,y=6, label="b", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))
 
 
 ## phylogenetic similarity
@@ -122,10 +124,11 @@ ee <- Effect(c("aridity", "Microsite"), m4, xlevels=list(aridity=1:11))
 
 ## abundance of natives
 plot3 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("native plant abundance")+
-  geom_jitter(data=subset(statusComm, status=="native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=0.6) +
+  geom_jitter(data=subset(statusComm, status=="native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=1) +
   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
-scale_y_continuous(trans='log2') +annotate("text", x=.8,y=65, label="c", size=8)
+scale_y_continuous(trans='log2') +annotate("text", x=.8,y=65, label="c", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))
 
 ## non-native only model
 m5 <- glmer.nb(abd ~ poly(aridity,2) * Microsite  + Year + (1|ID), data=subset(statusComm, status=="non.native"), nAGQ=0 )
@@ -138,10 +141,11 @@ ee <- Effect(c("aridity","Microsite"), m5, xlevels=list(aridity=1:11))
 
 ## abundance of non-natives
 plot4 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("non-native abundance")+
-  geom_jitter(data=subset(statusComm, status=="non.native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=0.6) +
+  geom_jitter(data=subset(statusComm, status=="non.native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=1) +
   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
-  scale_y_continuous(trans='log2') +annotate("text", x=.8,y=260, label="d", size=8)
+  scale_y_continuous(trans='log2') +annotate("text", x=.8,y=260, label="d", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))
 
 require(gridExtra)
 grid.arrange(plot1, plot2, plot3, plot4)
