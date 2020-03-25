@@ -3,12 +3,14 @@ title: 'The effect of a dominant shrub on annuals plants in a desert system chan
 author: "Alex Filazzola"
 date: "May 2017"
 output:
+  
   html_document:
     theme: yeti
     toc: yes
     toc_float: yes
     toc_depth: 3
-  
+editor_options: 
+  chunk_output_type: console
 ---
 ###Ephedra regional gradient (ERG) analyses
 
@@ -641,3 +643,10 @@ grid.arrange(p9,p11,p10, p12)
 
 grid.arrange(p11,p12)
 ```
+
+### Characteristics of shrubs
+```{r}
+sumShrub <- sitevars %>%  group_by(Site) %>% summarize(nvol = mean(volume, na.rm=T), ncanopy= mean(canopy, na.rm=T), ndx=mean(Dx, na.rm=T), nDxEph=mean(DxEph, na.rm=T))
+```
+
+data <- read.csv("Data//aridity.PET.csv")

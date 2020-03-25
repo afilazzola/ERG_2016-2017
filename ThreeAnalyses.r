@@ -35,10 +35,12 @@ sitevars <- read.csv("Data//ERG.shrub.csv")
 ### Positive interactions respond non-linearly to a gradient of aridity driven by winter rainfall
 
 ## set colours for plots
-obcol <- c("E69F00","56B4E9") ## Orange and blue
+obcol <- c("#E69F00","#56B4E9") ## Orange and blue
 bgcol <- c("#000000","#707070") ## black and grey
-scol <- bgcol[1]
-ocol <- bgcol[2]
+scol <- obcol[1]
+ocol <- obcol[2]
+
+
 
 ### Community First
 commArid <- merge(community, arid, by=c("Site","Year"))
@@ -58,7 +60,8 @@ ee <- Effect(c("aridity", "Microsite"), m1, xlevels=list(aridity=1:11))
 ## Plot Biomass
 plot1 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite))+ 
   geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=log(Biomass), color=Microsite), size=2, width = 0.2, alpha=1) + theme_Publication() + ylab("log-transformed biomass")+
-   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+   geom_line(lwd=2) +   
+  # geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol)) +
   annotate("text", x=1,y=4, label="a", size=8) +
   guides(color=guide_legend(override.aes=list(fill=NA)))
@@ -76,7 +79,8 @@ ee <- Effect(c("aridity", "Microsite"), m2, xlevels=list(aridity=1:11))
 ## Plot richness
 plot2 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("species richness")+
    geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=Richness, color=Microsite), size=2, width = 0.2, alpha=1) +
-  geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  geom_line(lwd=2) +   
+  # geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
   annotate("text", x=1,y=6, label="b", size=8) +
   guides(color=guide_legend(override.aes=list(fill=NA)))
@@ -125,7 +129,8 @@ ee <- Effect(c("aridity", "Microsite"), m4, xlevels=list(aridity=1:11))
 ## abundance of natives
 plot3 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("native plant abundance")+
   geom_jitter(data=subset(statusComm, status=="native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=1) +
-  geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  geom_line(lwd=2) +   
+  # geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
 scale_y_continuous(trans='log2') +annotate("text", x=.8,y=65, label="c", size=8) +
   guides(color=guide_legend(override.aes=list(fill=NA)))
@@ -142,7 +147,8 @@ ee <- Effect(c("aridity","Microsite"), m5, xlevels=list(aridity=1:11))
 ## abundance of non-natives
 plot4 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("non-native abundance")+
   geom_jitter(data=subset(statusComm, status=="non.native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=1) +
-  geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper), alpha=0.3, color=NA) + 
+  geom_line(lwd=2) +   
+  # geom_ribbon(aes(ymin = lower, ymax=upper), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
   scale_y_continuous(trans='log2') +annotate("text", x=.8,y=260, label="d", size=8) +
   guides(color=guide_legend(override.aes=list(fill=NA)))
@@ -156,7 +162,7 @@ census <-  read.csv("Data//ERG.phytometer.census.csv")
 end <- subset(census, Census=="end")
 
 phyto <- merge(end, arid, by=c("Year","Site"))
-
+phyto$Year <- as.factor(phyto$Year)
 phyto$Phacelia[is.na(phyto$Phacelia)] <- 0
 
 ## Run as Hurdle models
@@ -165,6 +171,7 @@ phyto$Phacelia[is.na(phyto$Phacelia)] <- 0
 phyto[,"pha.occ"] <- ifelse(phyto$Phacelia>0, 1,0)
 phyto[,"pla.occ"] <- ifelse(phyto$Plantago>0, 1,0)
 phyto[,"sal.occ"] <- ifelse(phyto$Salvia>0, 1,0)
+
 
 ## drop panoche 2017 because too cold
 phyto <- phyto %>% filter(Site!="PanocheHills" | Year!="2017") 
@@ -180,29 +187,53 @@ anova(globalBio, test="Chisq")
 
 
 ## Phacelia occurrence
-m1.occ <- glmer(pha.occ ~ poly(aridity,2) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=phyto, family="binomial" , nAGQ=0)
+m1.occ <- glmer(pha.occ ~ poly(aridity,2) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial" , nAGQ=0)
 car::Anova(m1.occ, test="Chisq")
 ## Phacelia Biomass
 m1.bio <- lmer(log(Phacelia.biomass) ~ poly(aridity,2) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pha.occ==1))
 anova(m1.bio, test="Chisq")
 
 ## Plantago occurrence
-m2.occ <- glmer(pla.occ ~ poly(aridity,2) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=phyto, family="binomial", nAGQ=0)
+m2.occ <- glmer(pla.occ ~ poly(aridity,2) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0)
 car::Anova(m2.occ, test="Chisq")
 ## Plantago Biomass
 m2.bio <- lmer(log(Plantago.biomass) ~ poly(aridity,2) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pla.occ==1))
 anova(m2.bio, test="Chisq")
 
 ## calcualte partial coefficents and confidence interval
-ee <- Effect(c("aridity", "Microsite"), m2.occ, xlevels=list(aridity=0:11))
+ee <- Effect(c("aridity","Microsite"), m2.occ, se=T, xlevels=data.frame(aridity=seq(0,11, by=0.2), Microsite = c(rep("shrub",56),rep("open",56)))) %>%  data.frame()
+
+## Salvia occurrence
+m3.occ <- glmer(sal.occ ~ poly(aridity,2) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0)
+car::Anova(m3.occ, test="Chisq")
+## Salvia Biomass
+m3.bio <- lmer(log(Salvia.biomass) ~ poly(aridity,2) * Microsite * Nutrient +  as.factor(Year) + (1|ID), data=subset(phyto, sal.occ==1))
+anova(m3.bio, test="Chisq")
 
 
-## abundance of natives
-plot1 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab(expression(italic("P. insularis")*"occurrence"))+
+## plot the phytometers 
+
+pha.ee <- Effect(c("aridity","Microsite"), m1.occ, se=T, xlevels=data.frame(aridity=seq(0,11, by=0.2), Microsite = c(rep("shrub",56),rep("open",56)))) %>%  data.frame()
+pla.ee <- Effect(c("aridity","Microsite"), m2.occ, se=T, xlevels=data.frame(aridity=seq(0,11, by=0.2), Microsite = c(rep("shrub",56),rep("open",56)))) %>%  data.frame()
+sal.ee <- Effect(c("aridity","Microsite"), m3.occ, se=T, xlevels=data.frame(aridity=seq(0,11, by=0.2), Microsite = c(rep("shrub",56),rep("open",56)))) %>%  data.frame()
+
+## phytometer occurrence
+plot1 <- ggplot(data=as.data.frame(pha.ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + 
+  ylab(expression(italic("P. tanacetifolia")*"occurrence"))+ xlab("") +
    geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
-  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+
-  annotate("text", x=0,y=.6, label="a", size=8) 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
+  
+plot2 <- ggplot(data=as.data.frame(pla.ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + 
+  ylab(expression(italic("P. insularis")*"occurrence"))+ xlab("") +
+  geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
 
+plot3 <- ggplot(data=as.data.frame(sal.ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + 
+  ylab(expression(italic("S. columbariae")*"occurrence"))+
+  geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
+
+gridExtra::grid.arrange(plot1, plot2, plot3, nrow=3)
 
 
 ## Salvia occurrence
