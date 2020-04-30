@@ -22,6 +22,8 @@ ihs <- function(x) {
 ## Load Aridity gradient
 source("continentality.r") ## arid
 arid$Year <- as.factor(arid$Year)
+## Inverse aridity so larger numbers are more arid, smaler as less arid
+arid$aridity <- 11 - arid$aridity
 
 ## load data
 nutrient <- read.csv("Data//ERG.soilnutrients.csv")
@@ -54,17 +56,17 @@ shapiro.test(residuals(m1))
 r.squared(m1)
 
 ## calcualte partial coefficents and confidence interval
-ee <- Effect(c("aridity", "Microsite"), m1, xlevels=list(aridity=1:11))
+ee <- Effect(c("aridity", "Microsite"), m1, xlevels=list(aridity=0:11))
 
 
 ## Plot Biomass
 plot1 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite))+ 
   geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=log(Biomass), color=Microsite), size=2, width = 0.2, alpha=1) + theme_Publication() + ylab("log-transformed biomass")+
    geom_line(lwd=2) +   
-  # geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol)) +
-  annotate("text", x=1,y=4, label="a", size=8) +
-  guides(color=guide_legend(override.aes=list(fill=NA)))
+  annotate("text", x=0,y=4, label="a", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA))) + xlim(0,10.5)
 
 
 ## species richness model
@@ -73,17 +75,17 @@ car::Anova(m2, type=3)
 
 
 ## calcualte partial coefficents and confidence interval
-ee <- Effect(c("aridity", "Microsite"), m2, xlevels=list(aridity=1:11))
+ee <- Effect(c("aridity", "Microsite"), m2, xlevels=list(aridity=0:11))
 
 
 ## Plot richness
 plot2 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("species richness")+
    geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=Richness, color=Microsite), size=2, width = 0.2, alpha=1) +
   geom_line(lwd=2) +   
-  # geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
-  annotate("text", x=1,y=6, label="b", size=8) +
-  guides(color=guide_legend(override.aes=list(fill=NA)))
+  annotate("text", x=0,y=6, label="b", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))  + xlim(0,10.5)
 
 
 ## phylogenetic similarity
@@ -119,21 +121,22 @@ statusComm <- merge(statusComm, arid, by=c("Site","Year"))
 
 
 ## native only model
-m4 <- glmer.nb( abd ~ aridity* Microsite  + Year + (1|ID), data=subset(statusComm, status=="native"), nAGQ=0)
+m4 <- glmer.nb( abd ~ poly(aridity,2) * Microsite  + Year + (1|ID), data=subset(statusComm, status=="native"), nAGQ=0)
 car::Anova(m4, test="Chisq", type=3)
+MuMIn::r.squaredGLMM(m4)
 
 ## calcualte partial coefficents and confidence interval
-ee <- Effect(c("aridity", "Microsite"), m4, xlevels=list(aridity=1:11))
+ee <- Effect(c("aridity", "Microsite"), m4, xlevels=list(aridity=0:11)) %>% data.frame()
 
 
 ## abundance of natives
-plot3 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("native plant abundance")+
+plot3 <- ggplot(data=data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("native plant abundance")+
   geom_jitter(data=subset(statusComm, status=="native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=1) +
   geom_line(lwd=2) +   
-  # geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
-scale_y_continuous(trans='log2') +annotate("text", x=.8,y=65, label="c", size=8) +
-  guides(color=guide_legend(override.aes=list(fill=NA)))
+scale_y_continuous(trans='log2', limits=c(0.2,140)) +annotate("text", x=0,y=65, label="c", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))  + xlim(0,10.5) 
 
 ## non-native only model
 m5 <- glmer.nb(abd ~ poly(aridity,2) * Microsite  + Year + (1|ID), data=subset(statusComm, status=="non.native"), nAGQ=0 )
@@ -141,17 +144,17 @@ car::Anova(m5, test="Chisq", type=2)
 
 
 ## calcualte partial coefficents and confidence interval
-ee <- Effect(c("aridity","Microsite"), m5, xlevels=list(aridity=1:11))
+ee <- Effect(c("aridity","Microsite"), m5, xlevels=list(aridity=0:11))
 
 
 ## abundance of non-natives
 plot4 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("non-native abundance")+
   geom_jitter(data=subset(statusComm, status=="non.native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=1) +
   geom_line(lwd=2) +   
-  # geom_ribbon(aes(ymin = lower, ymax=upper), alpha=0.3, color=NA) + 
+  geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
   scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
-  scale_y_continuous(trans='log2') +annotate("text", x=.8,y=260, label="d", size=8) +
-  guides(color=guide_legend(override.aes=list(fill=NA)))
+  scale_y_continuous(trans='log2', limits=c(0.5,420)) +annotate("text", x=0,y=420, label="d", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))  + xlim(0,10.5) 
 
 require(gridExtra)
 grid.arrange(plot1, plot2, plot3, plot4)
@@ -221,20 +224,23 @@ sal.ee <- Effect(c("aridity","Microsite"), m3.occ, se=T, xlevels=data.frame(arid
 plot1 <- ggplot(data=as.data.frame(pha.ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + 
   ylab(expression(italic("P. tanacetifolia")*"occurrence"))+ xlab("") +
    geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
-  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+ xlim(0,10.5) 
   
 plot2 <- ggplot(data=as.data.frame(pla.ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + 
   ylab(expression(italic("P. insularis")*"occurrence"))+ xlab("") +
   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
-  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+ xlim(0,10.5) 
 
 plot3 <- ggplot(data=as.data.frame(sal.ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + 
   ylab(expression(italic("S. columbariae")*"occurrence"))+
   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
-  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+ xlim(0,10.5) 
 
 gridExtra::grid.arrange(plot1, plot2, plot3, nrow=3)
 
+
+## Nutrient plots
+ggplot(phyto, aes(x=aridity, y=Salvia.biomass, fill=Nutrient)) + geom_point()  + geom_smooth(method="lm", formula=y~poly(x,2))
 
 ## Salvia occurrence
 m3.occ <- glmer(sal.occ ~ poly(aridity,2) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=phyto, family="binomial", nAGQ=0)

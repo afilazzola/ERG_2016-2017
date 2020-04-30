@@ -61,14 +61,14 @@ r.squared(m3)
 
 
 plot1 <- ggplot(data=nutArid, aes(x=aridity, y= log(N))) + theme_Publication() + 
-  ylab("nitrogen")+
+  ylab("Nitrogen")+
   geom_jitter(size=2, width = 0.2, alpha=1, aes(color=microsite)) + 
   geom_smooth(method="lm", lwd=2, lty=1, color="black") +
   scale_color_manual(values=c(scol, ocol)) +
   guides(color=guide_legend(override.aes=list(fill=NA)))
 
 plot2 <- ggplot(data=nutArid, aes(x=aridity, y= log(P), color=microsite, fill=microsite)) + theme_Publication() +
-  ylab("phosphorus")+
+  ylab("Phosphorus")+
   geom_jitter(size=2, width = 0.2, alpha=1) + 
   geom_smooth(method="lm", lwd=2, formula = y ~ poly(x,2)) +
   scale_color_manual(values=c(scol, ocol)) +
@@ -76,7 +76,7 @@ plot2 <- ggplot(data=nutArid, aes(x=aridity, y= log(P), color=microsite, fill=mi
   guides(color=guide_legend(override.aes=list(fill=NA)))
 
 plot3 <- ggplot(data=nutArid, aes(x=aridity, y= log(K))) + theme_Publication() + 
-  ylab("potassium")+
+  ylab("Potassium")+
   geom_jitter(size=2, width = 0.2, alpha=1, aes(color=microsite)) + 
   geom_smooth(method="lm", lwd=2, lty=1, color="black") +
   scale_color_manual(values=c(scol, ocol)) +
