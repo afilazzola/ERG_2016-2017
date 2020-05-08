@@ -58,7 +58,7 @@ r.squared(m1)
 ## calcualte partial coefficents and confidence interval
 ee <- Effect(c("aridity", "Microsite"), m1, xlevels=list(aridity=0:11))
 
-
+## Extract polynomials
 ## Plot Biomass
 plot1 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite))+ 
   geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=log(Biomass), color=Microsite), size=2, width = 0.2, alpha=1) + theme_Publication() + ylab("log-transformed biomass")+
@@ -128,7 +128,6 @@ MuMIn::r.squaredGLMM(m4)
 ## calcualte partial coefficents and confidence interval
 ee <- Effect(c("aridity", "Microsite"), m4, xlevels=list(aridity=0:11)) %>% data.frame()
 
-
 ## abundance of natives
 plot3 <- ggplot(data=data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("native plant abundance")+
   geom_jitter(data=subset(statusComm, status=="native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=1) +
@@ -164,6 +163,9 @@ grid.arrange(plot1, plot2, plot3, plot4)
 census <-  read.csv("Data//ERG.phytometer.census.csv")
 end <- subset(census, Census=="end")
 
+## Relevant nutrient to have ambient as control
+end$Nutrient <- relevel(end$Nutrient, "Ambient")
+
 phyto <- merge(end, arid, by=c("Year","Site"))
 phyto$Year <- as.factor(phyto$Year)
 phyto$Phacelia[is.na(phyto$Phacelia)] <- 0
@@ -191,16 +193,20 @@ anova(globalBio, test="Chisq")
 
 ## Phacelia occurrence
 m1.occ <- glmer(pha.occ ~ poly(aridity,2) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial" , nAGQ=0)
-car::Anova(m1.occ, test="Chisq")
+glmer(pha.occ ~ poly(aridity,2, raw=T) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial" , nAGQ=0) ## produce co-efficients
+car::Anova(m1.occ, test="Chisq", type=2)
 ## Phacelia Biomass
 m1.bio <- lmer(log(Phacelia.biomass) ~ poly(aridity,2) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pha.occ==1))
+lmer(log(Phacelia.biomass) ~ poly(aridity,2, raw=T) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pha.occ==1)) ## produce co-efficients
 anova(m1.bio, test="Chisq")
 
 ## Plantago occurrence
 m2.occ <- glmer(pla.occ ~ poly(aridity,2) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0)
-car::Anova(m2.occ, test="Chisq")
+glmer(pla.occ ~ poly(aridity,2, raw=T) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0) ## produce co-efficient
+car::Anova(m2.occ, test="Chisq", type=3)
 ## Plantago Biomass
 m2.bio <- lmer(log(Plantago.biomass) ~ poly(aridity,2) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pla.occ==1))
+lmer(log(Plantago.biomass) ~ poly(aridity,2, raw=T) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pla.occ==1)) ## produce co-efficient
 anova(m2.bio, test="Chisq")
 
 ## calcualte partial coefficents and confidence interval
@@ -208,9 +214,11 @@ ee <- Effect(c("aridity","Microsite"), m2.occ, se=T, xlevels=data.frame(aridity=
 
 ## Salvia occurrence
 m3.occ <- glmer(sal.occ ~ poly(aridity,2) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0)
-car::Anova(m3.occ, test="Chisq")
+glmer(sal.occ ~ poly(aridity,2, raw=T) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0)
+car::Anova(m3.occ, test="Chisq", type=3)
 ## Salvia Biomass
 m3.bio <- lmer(log(Salvia.biomass) ~ poly(aridity,2) * Microsite * Nutrient +  as.factor(Year) + (1|ID), data=subset(phyto, sal.occ==1))
+lmer(log(Salvia.biomass) ~ poly(aridity,2, raw=T) * Microsite * Nutrient +  as.factor(Year) + (1|ID), data=subset(phyto, sal.occ==1))
 anova(m3.bio, test="Chisq")
 
 

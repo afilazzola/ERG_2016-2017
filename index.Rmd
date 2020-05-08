@@ -12,7 +12,7 @@ output:
 editor_options: 
   chunk_output_type: console
 ---
-###Ephedra regional gradient (ERG) analyses
+### Ephedra regional gradient (ERG) analyses
 
 ![](./ephedra_cover.JPG)
 
@@ -20,79 +20,49 @@ editor_options:
 
 [alex.filazzola](http://www.filazzola.info)
 
-#### Abstract
+### Abstract
 
 An under-examined component of the shrub-annual relationship is how regional drivers, such as climate, may alter the sign or magnitude of positive interactions. Interspecific interactions between plants have been shown to be strongly linked to climate, particularly temperature and precipitation. The stress-gradient hypothesis (SGH) predicts that higher abiotic stress (i.e. for deserts, increasing temperature and reduced precipitation) will increase the frequency of positive interactions among shrubs and their annual understory. Regional climate gradients also have indirect effects on plant composition, such as determining consumer abundance and soil nutrient composition. Nutrient availability is particularly affected by precipitation because of altered decomposition rates of organic matter and mineralization. Therefore, the strength of facilitation and operating mechanism of a shrub on the annual plant community may change along a regional gradient. 
 
-#### Hypothesis
+### Hypothesis
 
 We tested the hypothesis that positive interactions among shrubs and annual plants will increase with abiotic stress and reduce nutrient availability along a regional gradient of aridity.
 
-#### Methods
+### Methods
 
 ![](./ERGmethods.JPG)
 
-```{r load packages, echo=FALSE, warning=FALSE, message=FALSE}
-## load packages for spatial manipulation
-library(vegan)
-library(MASS)
+
+### Load libraries, data, and functions
+```{r warning=FALSE, message=FALSE}
+## load packages
 library(tidyverse)
-library(ggthemes)
-library(usdm)
-library(broom)
-require(gridExtra)
+library(effects)
 library(lme4)
-library(lmerTest) ## approximations for tests
-library(MuMIn) ## calculates R squared
-library(lmPerm)
-```
+library(lmerTest)
 
-
-``` {r load functions, echo=FALSE}
-error.bar <- function(x, y, upper, lower=upper, length=0,...){
-if(length(x) != length(y) | length(y) !=length(lower) | length(lower) != length(upper))
-stop("vectors must be same length")
-arrows(x,y+upper, x, y-lower, angle=90, code=3, length=length, ...)
-}
+## Load functions
 
 se <- function(x, ...) sd(x)/sqrt(length(x)) ## standard error
 
 source("functions.r")
+source("rsquared.r")
 
 ## inverse hyperbolic sine transformation for zero laden data that fits log transformations
 ##Zhang, M., Fortney, J. C., Tilford, J. M., & Rost, K. M. (2000). An application of the inverse hyperbolic sine transformation—a note. Health Services and Outcomes Research Methodology, 1(2), 165-171.
 ihs <- function(x) {
-    y <- log(x + sqrt(x ^ 2 + 1))
-    return(y)
-}
-
-## reverse inverse hyperbolic sine
-hs <- function(x) {
-    y <- 0.5*exp(-x)*(exp(2*x)-1)
-    return(y)
+  y <- log(x + sqrt(x ^ 2 + 1))
+  return(y)
 }
 
 
-rii <- function(x, j, var)
-{
-s1 <- subset(x, Microsite == "shrub", select=var)
-o1 <- subset(x, Microsite == "open", select=var)
-return1 <- (s1 - o1) / (s1+o1)
-x1 <- x[seq(1, nrow(x), by = 2),]
-return2 <- cbind(x1[j], return1)
-return2[is.na(return2)] <- 0
-return(return2)
-}
-```
-
-
-###  Load datasets
-```{r}
 ## Load Aridity gradient
 source("continentality.r") ## arid
+arid$Year <- as.factor(arid$Year)
+## Inverse aridity so larger numbers are more arid, smaler as less arid
+arid$aridity <- 11 - arid$aridity
 
-
-## Load surveyed data
+## load data
 nutrient <- read.csv("Data//ERG.soilnutrients.csv")
 community <- read.csv("Data//ERG.communitydata.csv")
 community[is.na(community)] <- 0
@@ -102,551 +72,251 @@ sitevars <- read.csv("Data//ERG.shrub.csv")
 ```
 
 
+### Ambient plant community response to aridity gradient and shrub facilitation
+```{r , message=FALSE, warning=FALSE,  fig.width=8,  fig.height=8}
 
-### Weather for growing season
-```{r echo=FALSE, fid.width=28, warning=FALSE, message=FALSE}
+## set colours for plots
+obcol <- c("#E69F00","#56B4E9") ## Orange and blue
+bgcol <- c("#000000","#707070") ## black and grey
+scol <- obcol[1]
+ocol <- obcol[2]
 
-## weather station data
 
-data <- read.table("Data/ERG.climatedata.csv", header=T,sep=",")
-site.names <- c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")
-season1 <- subset(data, year==2015 & month > 10 | year==2016 & month < 5)
-season2 <- subset(data, year==2016 & month > 10 | year==2017 & month < 5)
-data <- rbind(season1,season2)
-data[,"season"] <- c(rep("season.1",nrow(season1)),rep("season.2",nrow(season2)))
-data <- na.omit(data)
 
-means <- aggregate(data$avg.temp, by=list(data$season,data$Gradient), mean)
-means.se <- aggregate(data$avg.temp, by=list(data$season,data$Gradient), se)
-means[,"se"] <- means.se[,3]
-colnames(means) <- c("season","gradient","avg","se")
-means[,"upper"] <- means[,"avg"]+means[,"se"]*1.96
-means[,"lower"] <- means[,"avg"]-means[,"se"]*1.96
+### Community First
+commArid <- merge(community, arid, by=c("Site","Year"))
+commArid[,"Year"] <- as.factor(commArid$Year)
 
-q <- ggplot(means, aes(x=gradient, y=avg, ymin=lower, ymax=upper, fill=season)) +  geom_pointrange( position=position_dodge(width=0.4), color = rep(c("Grey50","Black"),7), size=1)+ guides(fill = "none") + scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0)) + ylab("Average Temperature (C°)") + theme_Publication()
-q
 
-#precipitation
-precip <- aggregate(data$Precip, by=list(data$season,data$Gradient), sum)
-colnames(precip) <- c("season","Gradient","Precip")
+## biomass model
+m1 <- lmer(log(Biomass) ~ aridity * Microsite + Year + (1|ID), data=subset(commArid, Biomass>0))
+anova(m1, test="Chisq")
+shapiro.test(residuals(m1))
+r.squared(m1)
 
-p <-ggplot(precip, aes(Gradient, Precip, fill=season)) +geom_bar(stat = "identity", aes(fill = season), position = "dodge")+ scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0))+ylab("Precipitation (mm)") + theme_Publication()+ guides(fill = "none") 
-p
-```
+## calcualte partial coefficents and confidence interval
+ee <- Effect(c("aridity", "Microsite"), m1, xlevels=list(aridity=0:11))
 
+## Extract polynomials
+## Plot Biomass
+plot1 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite))+ 
+  geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=log(Biomass), color=Microsite), size=2, width = 0.2, alpha=1) + theme_Publication() + ylab("log-transformed biomass")+
+   geom_line(lwd=2) +   
+  geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol)) +
+  annotate("text", x=0,y=4, label="a", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA))) + xlim(0,10.5)
 
 
-### Phylogenetics
-```{r warning=FALSE, message=FALSE}
+## species richness model
+m2 <- glmer.nb(Richness ~ poly(aridity,2) * Microsite + Year + (1|ID), data=commArid)
+car::Anova(m2, type=3)
 
-library(picante)
-library(ape)
-library(brranching)
-library(taxize)
 
-## load species list to create tree
-spp.list <- read.csv("Data/ERG.specieslist.csv")
+## calcualte partial coefficents and confidence interval
+ee <- Effect(c("aridity", "Microsite"), m2, xlevels=list(aridity=0:11))
 
-## create a combined species name column and drop erinoginum because not to species level
-taxa <- paste(spp.list$Genus, spp.list$Species.name)
-taxa <- taxa[taxa!="Erinoginum spp"]
 
-## create tree of phylogeny
-tree <- phylomatic(taxa=taxa, get = 'POST')
-
-## calculate branch lengths using  Grafen's method
-## Grafen, A. (1989) The phylogenetic regression. Philosophical Transactions of the Royal society of London. Series B. Biological Sciences, 326, 119–157.
-tree2 <- compute.brlen(tree, method="Grafen")
-
-## view tree and outputs to verify branches
-plot(tree2)
-tree2
-
-## format community to only have site and microsite
-comm <- community %>% group_by(Year, Site, Microsite) %>% summarise_if(is.numeric, funs(sum(., na.rm=T)))
-comm <- comm[,c(1:3,13:53)] ## extract species abundances only
-comm <- data.frame(comm) ## convert to dataframe
-comm[,"site.micro"] <- paste(comm$Site,comm$Microsite,as.character(comm$Year)) ## create site by microsite column
-rownames(comm) <- comm[,length(comm)] ## replace row names with site by microsite
-comm[,c("Year","Site","Microsite","Erinoginum.spp","Boraginaceae.sp.","site.micro")] <- NULL ## drop all columns but ones for analysis
-
-## match species name format
-spp.list[,"spp.name"] <- paste(spp.list$Genus, spp.list$Species.name)
-colnames(comm) <- spp.list$spp.name[match(colnames(comm), spp.list$Species.shorthand)]
-
-## match species format
-names(comm) <- gsub(" ", "_", names(comm), fixed=T) ## underscores instead of spaces
-names(comm) <- gsub("__", "_", names(comm), fixed=T) ## replace double underscores with one
-names(comm) <- tolower(names(comm)) ## lower case names
-
-
-## mean phylogenetic distance
-mpd.data <- mpd(comm, cophenetic(tree2), abundance.weighted=T)
-
-## format dataframe
-mpd.data <- data.frame(Year=c(rep(2016,14),rep(2017,14)),Microsite=c("open","shrub"),site=rownames(comm), mpd=mpd.data)
-mpd.data[,"Site"] <- gsub(" open", "", mpd.data[,"site"]) 
-mpd.data[,"Site"] <- gsub(" shrub", "", mpd.data[,"Site"]) 
-mpd.data[,"Site"] <- gsub(" 2016", "", mpd.data[,"Site"]) 
-mpd.data[,"Site"] <- gsub(" 2017", "", mpd.data[,"Site"]) 
-mpd.data[,"site"] <- NULL
-mpd.data[is.na(mpd.data)] <- 0 ## barstow no plants
- 
-
-## getspecies richness for sites
-spp.rich <- community %>% group_by(Year, Site, Microsite) %>% summarize(richness=mean(Richness))
-spp.rich <- data.frame(spp.rich)
-
-## join data
-mpd.rich <- merge(mpd.data, spp.rich, by=c("Site","Microsite","Year"))
-
-
-```
-
-
-
-### Community analysis
-```{r warning=FALSE, message=FALSE}
-### indicator species analysis
-library(indicspecies)
-
-## indicator species analysis
-indval <- multipatt(community[,13:53], community$Microsite, control=how(nperm=999))
-summary(indval)
-
-
-site.names <- as.character(unique(community$Site))
-community.site <- subset(community, Site==site.names[7])
-
-
-
-## species accumilation curves
-
-## select site
-community.site <- subset(community, Site==site.names[7])
-
-## Compare entire site
-par(mar=c(4.5,4.5,0.5,0.5))
-accum0 <- specaccum(subset(community.site, select=13:43), method="random",  permutations=1000)
-plot(accum0,  ci.col="#00000030", xlab="Sampling effort", cex.axis=1.5, cex.lab=1.8, ylab="Species richness", lwd=2, ylim=c(0,20))
-
-
-accum1 <- specaccum(subset(community.site, Microsite=="shrub", select=13:43), method="random",  permutations=1000)
-accum2 <- specaccum(subset(community.site, Microsite=="open", select=13:43), method="random",  permutations=1000)
-
-specpool(subset(community,  select=13:43), community$Site)
-
-par(mar=c(4.5,4.5,0.5,0.5))
-plot(accum2,  col="#E69F00",ci.col="#E69F0090", xlab="Sampling effort", cex.axis=1.5, cex.lab=1.8, ylab="Species richness", lwd=2, ylim=c(0,16))
-plot(accum1,add=T , col="#56B4E9",   ci.col="#56B4E990", lwd=2)
-
-
-micros <- community$Microsite[1:120]
-
-indval <- multipatt(community.site[,13:53], micros, control=how(nperm=999))
-summary(indval)
-
-```
-
-### Ordination Analysis
-
-
-```{r warning=FALSE, message=FALSE}
-
-comm.sum <- community %>%  group_by(Microsite, Site) %>% summarize_if(is.numeric, funs(sum))
-comm.sum <- data.frame(comm.sum)
-rownames(comm.sum) <- paste(comm.sum$Microsite,comm.sum$Site)
-
-## transform data
-comm.trans <- decostand(comm.sum[,13:53], "hell")
-
-## clean data for ordination
-## see distribution of spp
-boxplot(comm.trans, xaxt="n")
-labs <- colnames(comm.trans)
-text(cex=0.8, x=1:41-1, y=-0.12, labs, xpd=TRUE, srt=45)
-
-## remove spp with only one instancve
-comm.trans <- comm.trans[,!colSums(comm.trans)==apply(comm.trans, 2, max)]
-
-
-## replace outliers with mean
-avg.max <- function(x) {
-  y =  max(x)
-  avg = mean(x)
-  x[x==y] <- avg
-  return(x)
-}
-
-## get soil moisture from site/microsite
-
-## Soil moisture
-smc <- read.csv("Data/ERG.phytometer.census.csv")
-smc.end <- subset(smc, Census=="end")
-smc.avg <- smc.end %>% group_by(Site, Microsite) %>% summarize(mean.smc=mean(swc, na.rm=T))
-smc.avg <- data.frame(smc.avg)
-smc.avg[,"grp"] <- as.factor(c(3,3,2,1,4,4,1,1,4,4,3,3,2,2))
-
-boxplot(mean.smc ~ grp, data=smc.avg)
-
-## CA or PCA
-dca1 <- decorana(comm.trans) ## length of gradient >2 & determine relative differences in community composition 
-
-
-## conduct ordination
-ord <- cca(comm.trans)
-summary(ord)
-
-
-## calculate priority
-spp.priority <- colSums(comm.trans)
-
-## plot ordination
-par(mar=c(4.5,4.5,0.5,0.5))
-plot(ord, type="n", xlab="CA1 (35.7%)", ylab="CA2 (16.6%)", xlim=c(-2,2))
-ordiellipse(ord, grp, lty = 2, col = "grey80", draw="polygon", alpha=150)
-orditorp(ord, display = "species", cex = 0.7, col = "darkorange3", priority=spp.priority, air=0.8)
-orditorp(ord, display = "sites", cex = 0.7, col = "darkslateblue", air=0.1)
-
-
-##collect environmental variables for site
-nutrients <- read.csv("Data/ERG.soilnutrients.csv")
-nutrients.mean <- nutrients %>% group_by(microsite, Site) %>% summarise_all(funs(mean))
-nutrients.vars <- data.frame(nutrients.mean)
-
-
-## summarize daily means across sites
-HOBO <- read.csv("Data/ERG.logger.data.csv")
-HOBO.data <- HOBO %>%  group_by(Site, Microsite, Year, Month, Day) %>% summarize(temp.var=var(Temp),Temp=mean(Temp),RH=mean(RH))
-
-means <- HOBO.data %>% group_by(Microsite, Site) %>% summarize(Temp.=mean(Temp, na.rm=T),rh=mean(RH, na.rm=T),temp.se=se(Temp),rh.se=se(RH))
-means <- data.frame(means)
-
-## soil moisture
-smc.early <- subset(smc, Census=="emergence")
-smc.avg <- smc.early %>% group_by(Microsite, Site) %>% summarize(SMC=mean(swc, na.rm=T))
-
-envs <- data.frame(swc=smc.avg[,"SMC"],nutrients.vars[,c("N","P","K")], means[,c("Temp.","rh")])
-
-## Check for collinearity
-cor(envs)
-envs[,"K"] <- NULL ## drop potassium for being correlated
-envs[,"rh"] <- NULL ## drop humidity for being correlated
-
-ord.env <- envfit(ord, envs)
-plot(ord.env)
-
-```
-
-
-
-### Compare environmental differences - mixed model results
-```{r warning= FALSE, message=FALSE}
-nutrient <- read.csv("Data//ERG.soilnutrients.csv")
-nutrient.mean <- nutrient %>% group_by(Site, microsite) %>% summarize(nitrogen=mean(N), phosphorus=mean(P), potassium=mean(K)) %>% data.frame(.)
-
-nutrient.arid <- merge(nutrient.mean, subset(arid, Year==2016), by="Site" )
-
-## potassium
-m1 <- lm(potassium ~ aridity* microsite, data=nutrient.arid)
-summary(m1)
-anova(m1)
-r.squaredGLMM(m1) ## R squared values 
-
-## nitrogen
-m2 <- lm(nitrogen ~ aridity* microsite, data=nutrient.arid)
-summary(m2)
-anova(m2)
-r.squaredGLMM(m2) ## R squared values 
-
-## phosphorus
-m3 <- lm(phosphorus ~ aridity* microsite, data=nutrient.arid)
-summary(m3)
-anova(m3)
-r.squaredGLMM(m2) ## R squared values 
-
-ggplot(nutrient.arid) + geom_jitter(aes(x=aridity, y=potassium, color=microsite))
-
-p5 <- ggplot(nutrient.arid) + geom_jitter(aes(x=aridity, y=potassium), color="#56B4E9", size=3, data=subset(nutrient.arid, microsite=="shrub"))+ geom_jitter(aes(x=aridity, y=potassium), color="#E69F00", size=3, data=subset(nutrient.arid, microsite=="open"))+  stat_smooth(method="lm", formula= y~x,aes(x=aridity, y=potassium), color="#56B4E9", fill="#56B4E980", data=subset(nutrient.arid, microsite=="shrub"), lwd=1.4) +  
-  stat_smooth(method="lm", formula= y~x,aes(x=aridity, y=potassium), color="#E69F00", fill="#E69F0080",data=subset(nutrient.arid, microsite=="open"), lwd=1.4)+ ylab("Nitrogen (ppm)") + xlab("")+ theme_Publication()+ annotate("text", x=-4.5,y=32, label="a", size=8)+coord_cartesian(ylim=c(0, 32))
-
-
-
-se <- function(x) sd(na.omit(x))/sqrt(length(na.omit(x)))
-
-swc <- census %>% group_by(Year, Site, Microsite, Census) %>% summarize(swc.avg=mean(swc), swc.se=se(swc))
-smc.arid <- merge(swc, arid, by=c("Site","Year"))
-
-
-## early swc
-smc.early <- subset(smc.gams, Census=="emergence")
-
-
-m6 <- lmer(swc.avg~Microsite * aridity + (1|Year), data=smc.early)
-shapiro.test(resid(m6))
-anova(m6)
-r.squaredGLMM(m6) ## R squared values 
-
-
-### soil moisture at emergence
-p6 <- ggplot(smc.early) + geom_jitter(aes(x=aridity, y=swc.avg), color="#56B4E9", size=3, data=subset(smc.early, Microsite=="shrub")) +geom_jitter(aes(x=aridity, y=swc.avg), color="#E69F00", size=3, data=subset(smc.early, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=aridity, y=swc.avg), data=smc.early, lwd=1.4, color="black") + ylab("Soil moisture at emergence (%)") + xlab("Aridity Gradient")+ annotate("text", x=0,y=30, label="c", size=8)
-
-
-## Create seasons for hobo
-season1 <- subset(HOBO.data, Year==2015 & Month > 10 | Year==2016 & Month < 5)
-season2 <- subset(HOBO.data, Year==2016 & Month > 10 | Year==2017 & Month < 5)
-HOBO.season <- rbind(season1,season2)
-HOBO.season[,"season"] <- c(rep("season.1",nrow(season1)),rep("season.2",nrow(season2)))
-HOBO.season <- na.omit(HOBO.season)
-
-## Means across the entire season
-hobo.means <- HOBO.season %>% group_by(season, Microsite, Site) %>% summarize(temp.avg=mean(Temp),temp.var=var(Temp),temp.sd=sd(Temp),temp.se=se(Temp),rh.avg=mean(RH, na.rm=T),rh.var=var(RH, na.rm=T),rh.se=se(RH),frost=(sum(na.omit(Temp)<0)/length(na.omit(Temp))*100),heat=(sum(na.omit(Temp)>30)/length(na.omit(Temp))*100))
-hobo.means[,"Year"] <- c(rep(2016,14),rep(2017,14))
-
-## mean daily variation
-hobo.var <-  HOBO.season  %>% group_by(season, Microsite, Site) %>% summarize(day.var=mean(temp.var))
-hobo.var <- data.frame(hobo.var)
-hobo.var[,"Year"] <- c(rep(2016,14),rep(2017,14))
-
-
-hobo.arid <- merge(hobo.means, gams.data, by=c("Site","Year"))
-hobo.var <- merge(hobo.var, gams.data, by=c("Site","Year"))
-# hobo.arid[,"CV"] <-hobo.arid[,"temp.sd"] /hobo.arid[,"CV"] 
-
-## temperature variability
-m7 <- lmer(day.var~Microsite * poly(gams,2) + (1|Year), data=hobo.var)
-shapiro.test(resid(m7))
-anova(m7)
-r.squaredGLMM(m7) ## R squared values 
-
-
-p7 <- ggplot(hobo.var) + geom_jitter(aes(x=gams, y=day.var), color="#56B4E9", size=3, data=subset(hobo.var, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=day.var), color="#E69F00", size=3, data=subset(hobo.var, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=day.var), color="#E69F00", fill="#E69F0080", data=subset(hobo.var, Microsite=="open"), lwd=1.4) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=day.var), color="#56B4E9", fill="#56B4E970", data=subset(hobo.var, Microsite=="shrub"), lwd=1.4)  + ylab("Temperature variation") + xlab("Aridity Gradient")+ annotate("text", x=-4.5,y=125, label="d", size=8) 
-
-shrubz <- read.csv("Data/ERG.shrub.csv")
-shrub.mean <- shrubz %>% group_by(Site, Microsite) %>% summarize(compact=mean(Compaction))
-
-shrub.clim <- data.frame(shrub.mean, gams=rep(gams.data[gams.data$Year==2016,"gams"],each=2))
-#shrub.clim <- subset(shrub.clim, Year==2016)
-
-m8 <- lm(log(compact)  ~  Microsite * gams, data=shrub.clim)
-summary(m8)
-anova(m8)
-r.squaredGLMM(m8) ## R squared values 
-
-
-
-p8 <- ggplot(shrub.clim) + geom_jitter(aes(x=gams, y=compact), color="#56B4E9", size=3, data=subset(shrub.clim, Microsite=="shrub"))+ geom_jitter(aes(x=gams, y=compact), color="#E69F00", size=3, data=subset(shrub.clim, Microsite=="open"))+  stat_smooth(method="lm", formula= y~exp(x),aes(x=gams, y=compact), color="#56B4E9", fill="#56B4E980", data=subset(shrub.clim, Microsite=="shrub"), lwd=1.4) +  
-  stat_smooth(method="lm", formula= y~exp(x),aes(x=gams, y=compact), color="#E69F00", fill="#E69F0080",data=subset(shrub.clim, Microsite=="open"), lwd=1.4)+ ylab(expression("Soil compaction (kg/cm"*"2"^2*")")) + xlab("")+ theme_Publication() + annotate("text", x=-4.4,y=2.5, label="b", size=8) +coord_cartesian(ylim=c(0.5, 2.5))
-
-grid.arrange(p5,p6,p7,p8)
-
-
-```
-
-
-### Plot level GLMM
-```{r warning=FALSE, message=FALSE}
-community.arid <- merge(community, arid, by=c("Site","Year"))
-
-
-m1 <- glmer.nb(Abundance ~ Microsite * aridity + (1|Year), data=community.arid)
-car::Anova(m1, type=2)
-coef(m1)
-
-source("rsquared.r")
-
-m2 <- glmer.nb(Richness ~ Microsite * poly(aridity,2) + (1|Year), data=community.arid)
-car::Anova(m2, type=2)
-# rsquared.glmm(m2)
-
-# m2.gam <- gam(Richness~ Microsite +s(gams, k=3) + s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=poisson, data=community.arid)
-
-## plot richness
-p1 <- ggplot(community.arid) + geom_jitter(aes(x=aridity, y=Richness), color="#181818", size=3, alpha=0.4, width = 0.75,shape = 1, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=aridity, y=Richness), color="#181818", size=2,alpha=0.4, data=subset(community.arid, Microsite=="open"),shape = 2, width = 0.75)  + theme_Publication() +  ylab("species richness") + xlab("Gams index of continentality")+ 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=aridity, y=Richness), color="#181818", fill="#80808080" , data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~poly(x,2),aes(x=aridity, y=Richness), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Species richness") + xlab("") + annotate("text", x=15,y=6, label="a", size=8) 
-
-
-# m3.gam <- gam(ihs(Biomass)~  s(gams, by=Microsite, k=3) + s(Year, bs="re"), family=gaussian, data=community.arid)
-# 
-
-## biomass
-p2 <- ggplot(community.arid) + geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=3, width = 0.75,shape = 1, alpha=0.5, data=subset(community.arid, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=ihs(Biomass)), color="#181818", size=2,shape = 2,alpha=0.5, width = 0.75, data=subset(community.arid, Microsite=="open"))  + theme_Publication() + 
-  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="shrub"), lwd=2) + 
-  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=ihs(Biomass)), color="#181818", fill="#80808080", data=subset(community.arid, Microsite=="open"), lwd=2, lty=2)+  ylab("Annual biomass") + xlab("")+ annotate("text", x=50,y=5, label="b", size=8) + xlab("Gradient of rainfall continentality")
-
-
-m4<- lmer(mpd~ Microsite * gams + (1|Year), data=mpd.gams)
-anova(m4)
-r.squaredGLMM(m4) ## R squared values
-
-## phylogenetic diversity
-p3 <- ggplot(mpd.gams)+ geom_jitter(aes(x=gams, y=mpd), color="#181818", size=3,shape=1, alpha=0.4, data=subset(mpd.gams, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=mpd), color="#181818",alpha=0.4, size=2,shape=2, data=subset(mpd.gams, Microsite=="open"))  +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=mpd), data=subset(mpd.gams, Microsite=="shrub"), color="#181818",fill="#80808080", lwd=2)+  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=mpd), data=subset(mpd.gams, Microsite=="open"), color="#181818",fill="#80808080", lwd=2, lty=2)+ ylab("Phylogenetic community dissimilarity") + xlab("Gradient of rainfall continentality")+ theme_Publication()+ annotate("text", x=50,y=1.4, label="c", size=8) 
+## Plot richness
+plot2 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("species richness")+
+   geom_jitter(data=subset(commArid, Biomass>0), aes(x=aridity, y=Richness, color=Microsite), size=2, width = 0.2, alpha=1) +
+  geom_line(lwd=2) +   
+  geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
+  annotate("text", x=0,y=6, label="b", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))  + xlim(0,10.5)
 
 
 ## native vs non-native
-status.gams <- merge(status.data, gams.data, by=c("Year","Site"))
-
-m5<- glmer.nb(native~ Microsite * scale(gams) + (1|Year), data=status.gams) ## need to scale data
-car::Anova(m5, type=3)
-# rsquared.glmm(m5)
+status <- read.csv("Data//ERG.specieslist.csv")
 
 
-m6<- glmer.nb(non.native~ Microsite * scale(gams) + (1|Year), data=status.gams)   ## need to scale data
-car::Anova(m6, type=3)
-# rsquared.glmm(m5)
+statusComm <- community %>%  gather(Species.shorthand, abundance, 13:53) 
+statusLong <- merge(statusComm , status, by="Species.shorthand")
+statusComm <- statusLong %>%   group_by(ID, Year, Site, Microsite, status, Rep) %>%  summarize(abd= sum(abundance)) %>%  data.frame(.) ## plants per plot
+
+statusComm <- merge(statusComm, arid, by=c("Site","Year"))
 
 
-status.plot <- gather(status.gams, origin, abundance, 5:6)
+## native only model
+m4 <- glmer.nb( abd ~ poly(aridity,2) * Microsite  + Year + (1|ID), data=subset(statusComm, status=="native"), nAGQ=0)
+car::Anova(m4, test="Chisq", type=3)
+MuMIn::r.squaredGLMM(m4)
 
-p4 <- ggplot(subset(status.plot, abundance>0)) + geom_jitter(aes(x=gams, y=abundance), color="#181818", size=3, data=subset(status.plot, Microsite=="shrub"), width = 1, shape=1, alpha=0.3) +geom_jitter(aes(x=gams, y=abundance), width = 1, color="#181818", size=2,alpha=0.3,shape=2, data=subset(status.plot, Microsite=="open"))  + theme_Publication() + 
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance), color="#505050", se=F, data=subset(status.plot, Microsite=="open" & origin=="native"), lwd=2, lty=2)+
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#181818",  data=subset(status.plot, Microsite=="open" & origin=="non.native"), lwd=2, lty=2)+
- geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#505050", data=subset(status.plot, Microsite=="shrub" & origin=="native"), lwd=2)+
-  geom_smooth(method="glm", method.args=list(family="poisson"), formula= y~x,aes(x=gams, y=abundance),se=F, color="#181818",  data=subset(status.plot, Microsite=="shrub" & origin=="non.native"), lwd=2) +  ylab("Annual plant abundance") + xlab("Gradient of rainfall continentality")+ annotate("text", x=50,y=310, label="d", size=8) 
+## calcualte partial coefficents and confidence interval
+ee <- Effect(c("aridity", "Microsite"), m4, xlevels=list(aridity=0:11)) %>% data.frame()
 
+## abundance of natives
+plot3 <- ggplot(data=data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("native plant abundance")+
+  geom_jitter(data=subset(statusComm, status=="native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=1) +
+  geom_line(lwd=2) +   
+  geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
+scale_y_continuous(trans='log2', limits=c(0.2,140)) +annotate("text", x=0,y=65, label="c", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))  + xlim(0,10.5) 
 
-grid.arrange(p1,p2)
-
-
-### Nutrients 
-nutrient.mean <- nutrients.climate %>% group_by(Site, gams, microsite) %>% summarize(nitrogen=mean(N), phosphorus=mean(P), potassium=mean(K))
-nutrient.mean <- data.frame(nutrient.mean,gams=rep(gams.data[gams.data$Year==2016,"gams"],each=2))
-
-## nitrogen
-m5 <- lm(nitrogen ~ poly(gams,2)* microsite, data=nutrient.mean)
-summary(m5)
-anova(m5)
-r.squaredGLMM(m5) ## R squared values 
-
-p5 <- ggplot(nutrient.mean) + geom_jitter(aes(x=gams, y=nitrogen), color="#181818", size=3, shape=16,alpha=0.5, data=subset(nutrient.mean, microsite=="shrub"))+ geom_jitter(aes(x=gams, y=nitrogen), color="#181818", size=3,shape=17, alpha=0.4, data=subset(nutrient.mean, microsite=="open"))+  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=nitrogen), color="#181818", fill="#80808080", data=subset(nutrient.mean, microsite=="shrub"), lwd=2) +  
-  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=nitrogen), color="#181818", fill="#80808080",data=subset(nutrient.mean, microsite=="open"), lwd=2, lty=2)+ ylab("Nitrogen (ppm)") + xlab("")+ theme_Publication()+ coord_cartesian(ylim=c(-2, 26)) + xlab("")+ annotate("text", x=63,y=25, label="a", size=8) 
+## non-native only model
+m5 <- glmer.nb(abd ~ poly(aridity,2) * Microsite  + Year + (1|ID), data=subset(statusComm, status=="non.native"), nAGQ=0 )
+car::Anova(m5, test="Chisq", type=2)
 
 
-smc.early <- subset(smc, Census=="emergence")
-smc.early <- merge(smc.early, gams.data, by=c("Year","Site"))
-smc.early <- smc.early %>% group_by(Year, Site, gams, Microsite) %>% summarize(swc.avg=mean(swc))
-
-## nitrogen
-m6 <- lmer(log(swc.avg) ~ poly(gams,2)* Microsite + (1|Year), data=smc.early)
-summary(m6)
-anova(m6)
-r.squaredGLMM(m6) ## R squared values 
+## calcualte partial coefficents and confidence interval
+ee <- Effect(c("aridity","Microsite"), m5, xlevels=list(aridity=0:11))
 
 
-p6 <- ggplot(smc.early) + geom_jitter(aes(x=gams, y=swc.avg), color="#181818", size=3, shape=16,alpha=0.5, data=subset(smc.early, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=swc.avg), color="#181818", size=3,shape=17,alpha=0.5, data=subset(smc.early, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=swc.avg), data=smc.early, lwd=2, color="black") + ylab("Soil moisture at emergence (%)")  + xlab("")+ annotate("text", x=50,y=35, label="b", size=8) 
+## abundance of non-natives
+plot4 <- ggplot(data=as.data.frame(ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + ylab("non-native abundance")+
+  geom_jitter(data=subset(statusComm, status=="non.native" & abd>0), aes(x=aridity, y=abd, color=Microsite), size=2, width = 0.2, alpha=1) +
+  geom_line(lwd=2) +   
+  geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c(scol, ocol)) + scale_fill_manual(values=c(scol, ocol))+
+  scale_y_continuous(trans='log2', limits=c(0.5,420)) +annotate("text", x=0,y=420, label="d", size=8) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))  + xlim(0,10.5) 
 
-
-## temperature variability
-m7 <- lmer(temp.var~Microsite * poly(gams,2) + (1|Year), data=hobo.arid)
-shapiro.test(resid(m7))
-anova(m7) 
-r.squaredGLMM(m7) ## R squared values 
-
-
-p7 <- ggplot(hobo.var) + geom_jitter(aes(x=gams, y=day.var), color="#181818", size=3, shape=16, alpha=0.5, data=subset(hobo.var, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=day.var), color="#181818", size=3, shape=17, alpha=0.5, data=subset(hobo.var, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=day.var), color="#181818", fill="#80808080", data=subset(hobo.var, Microsite=="open"), lwd=2, lty=2) +  stat_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=day.var), color="#181818", fill="#80808080", data=subset(hobo.var, Microsite=="shrub"), lwd=2)  + ylab("Temperature variation") + xlab("Gradient of rainfall continentality")+ annotate("text", x=50,y=125, label="c", size=8) 
-
-
-## soil compaction
-m8 <- lm(log(compact)  ~  Microsite * gams, data=shrub.clim)
-summary(m8)
-anova(m8)
-r.squaredGLMM(m8) ## R squared values 
-
-p8 <- ggplot(shrub.clim) + geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=16, alpha=0.5, data=subset(shrub.clim, Microsite=="shrub")) +geom_jitter(aes(x=gams, y=log(compact)), color="#181818", size=3, shape=17, alpha=0.5, data=subset(shrub.clim, Microsite=="open"))  + theme_Publication()+ stat_smooth(method="lm", formula= y~x, aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="open"), lwd=2, lty=2) +  stat_smooth(method="lm", formula= y~x,aes(x=gams, y=log(compact)), color="#181818", fill="#80808080", data=subset(shrub.clim, Microsite=="shrub"), lwd=2)  + ylab(expression(bold("Soil compaction (kg/cm"*"2"^2*")"))) + xlab("Gradient of rainfall continentality")+ annotate("text", x=63,y=1.1, label="d", size=8) 
-
-grid.arrange(p5,p6,p7,p8)
+require(gridExtra)
+grid.arrange(plot1, plot2, plot3, plot4)
 
 ```
 
+### Phytometer response to aridity gradient, nutrient addition, and shrub facilitation
+```{r , message=FALSE, warning=FALSE, fig.width=8, fig.height=22}
 
-### Phytometer with GAMS
-```{r warning=FALSE, message=FALSE}
-census <- read.csv("Data/ERG.phytometer.census.csv")
-census[is.na(census)] <- 0
-census.arid <- merge(census,gams.data, by=c("Year","Site"))
+census <-  read.csv("Data//ERG.phytometer.census.csv")
+end <- subset(census, Census=="end")
 
-## treatment plots
-census.long <- gather(census.arid, species, biomass, 12:14)
-census.long[,"species"] <- ifelse(census.long[,"species"] =="Phacelia.biomass", "P. tanacetifolia",
-                                  ifelse(census.long[,"species"]=="Plantago.biomass","P. insularis","S. columbariae"))
-census.long[,"species"] <- as.factor(census.long$species)
+## Relevant nutrient to have ambient as control
+end$Nutrient <- relevel(end$Nutrient, "Ambient")
 
-## microsite average
-census.micro <- census.long %>% filter(biomass>0) %>%  group_by(Microsite, species) %>%  summarize(Biomass=mean(biomass), error=se(biomass))
+phyto <- merge(end, arid, by=c("Year","Site"))
+phyto$Year <- as.factor(phyto$Year)
+phyto$Phacelia[is.na(phyto$Phacelia)] <- 0
 
-p9 <- ggplot(census.micro, aes(x=species, y=Biomass, fill=Microsite)) +   geom_bar(position=position_dodge(), stat="identity", colour="black") + scale_fill_brewer(palette="Greys")+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
-                  width=.2,                    # Width of the error bars
-                  position=position_dodge(.9))+ theme_Publication() + theme(axis.text.x = element_text(size=16, face="italic"),axis.text.y = element_text(size=16),axis.title = element_text(size=20),legend.text=element_text(size=18))
+## Run as Hurdle models
 
-## nutrient average
-census.nut <- census.long %>% filter(biomass>0) %>%  group_by(Nutrient, species) %>%  summarize(Biomass=mean(biomass), error=se(biomass))
-
-p10 <- ggplot(census.nut, aes(x=species, y=log(Biomass), fill=Nutrient)) +   geom_bar(position=position_dodge(), stat="identity",colour="black") + scale_fill_brewer(palette="Greys")+  geom_errorbar(aes(ymin=Biomass-error, ymax=Biomass+error),
-                  width=.2,                    # Width of the error bars
-                  position=position_dodge(.9))+ theme_Publication()+ theme(axis.text.x = element_text(size=16, face="italic"),axis.text.y = element_text(size=16),axis.title = element_text(size=20),legend.text=element_text(size=18))
+## create occurrence columns
+phyto[,"pha.occ"] <- ifelse(phyto$Phacelia>0, 1,0)
+phyto[,"pla.occ"] <- ifelse(phyto$Plantago>0, 1,0)
+phyto[,"sal.occ"] <- ifelse(phyto$Salvia>0, 1,0)
 
 
+## drop panoche 2017 because too cold
+phyto <- phyto %>% filter(Site!="PanocheHills" | Year!="2017") 
 
-## logistic first
-census.long[,"presence"] <- ifelse(census.long$biomass>0,1,0)
-## Drop panoche 2017 because of cold
-census.npan <- census.long %>% filter(Site!="PanocheHills" | Year!="2017") 
+## Compare global models
+occLong <- gather(phyto, species, occ, 23:25)
+globalOcc <- glmer(occ ~ species:poly(aridity,2) + Microsite * species + species:Nutrient+ as.factor(Year) + (1|ID), data=occLong, family="binomial" , nAGQ=0)
+car::Anova(globalOcc, test="Chisq")
+
+bioLong <- gather(phyto, species, bio, 13:15)
+globalBio <- lmer(log(bio) ~ species:poly(aridity,2) + Microsite * species + species:Nutrient + as.factor(Year) + (1|ID), data=bioLong)
+anova(globalBio, test="Chisq")
 
 
-# m1.l <- glmer(presence~Microsite * gams * Nutrient + (1|Year),data=subset(census.npan, species=="P. tanacetifolia" & census=="end"), family=binomial)
-# car::Anova(m1.l, type=2)
+## Phacelia occurrence
+m1.occ <- glmer(pha.occ ~ poly(aridity,2) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial" , nAGQ=0)
+glmer(pha.occ ~ poly(aridity,2, raw=T) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial" , nAGQ=0) ## produce co-efficients
+car::Anova(m1.occ, test="Chisq", type=2)
+## Phacelia Biomass
+m1.bio <- lmer(log(Phacelia.biomass) ~ poly(aridity,2) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pha.occ==1))
+lmer(log(Phacelia.biomass) ~ poly(aridity,2, raw=T) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pha.occ==1)) ## produce co-efficients
+anova(m1.bio, test="Chisq")
+
+## Plantago occurrence
+m2.occ <- glmer(pla.occ ~ poly(aridity,2) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0)
+glmer(pla.occ ~ poly(aridity,2, raw=T) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0) ## produce co-efficient
+car::Anova(m2.occ, test="Chisq", type=3)
+## Plantago Biomass
+m2.bio <- lmer(log(Plantago.biomass) ~ poly(aridity,2) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pla.occ==1))
+lmer(log(Plantago.biomass) ~ poly(aridity,2, raw=T) * Microsite * Nutrient + as.factor(Year) + (1|ID), data=subset(phyto, pla.occ==1)) ## produce co-efficient
+anova(m2.bio, test="Chisq")
+
+## calcualte partial coefficents and confidence interval
+ee <- Effect(c("aridity","Microsite"), m2.occ, se=T, xlevels=data.frame(aridity=seq(0,11, by=0.2), Microsite = c(rep("shrub",56),rep("open",56)))) %>%  data.frame()
+
+## Salvia occurrence
+m3.occ <- glmer(sal.occ ~ poly(aridity,2) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0)
+glmer(sal.occ ~ poly(aridity,2, raw=T) * Microsite * Nutrient + Year + (1|ID), data=phyto, family="binomial", nAGQ=0)
+car::Anova(m3.occ, test="Chisq", type=3)
+## Salvia Biomass
+m3.bio <- lmer(log(Salvia.biomass) ~ poly(aridity,2) * Microsite * Nutrient +  as.factor(Year) + (1|ID), data=subset(phyto, sal.occ==1))
+lmer(log(Salvia.biomass) ~ poly(aridity,2, raw=T) * Microsite * Nutrient +  as.factor(Year) + (1|ID), data=subset(phyto, sal.occ==1))
+anova(m3.bio, test="Chisq")
 
 
-m1 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.long, species=="P. tanacetifolia" & presence==1 ))
-shapiro.test(resid(m1))
+## plot the phytometers 
+
+pha.ee <- Effect(c("aridity","Microsite"), m1.occ, se=T, xlevels=data.frame(aridity=seq(0,11, by=0.2), Microsite = c(rep("shrub",56),rep("open",56)))) %>%  data.frame()
+pla.ee <- Effect(c("aridity","Microsite"), m2.occ, se=T, xlevels=data.frame(aridity=seq(0,11, by=0.2), Microsite = c(rep("shrub",56),rep("open",56)))) %>%  data.frame()
+sal.ee <- Effect(c("aridity","Microsite"), m3.occ, se=T, xlevels=data.frame(aridity=seq(0,11, by=0.2), Microsite = c(rep("shrub",56),rep("open",56)))) %>%  data.frame()
+
+## phytometer occurrence
+plot1 <- ggplot(data=as.data.frame(pha.ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + 
+  ylab(expression(italic("P. tanacetifolia")*"occurrence"))+ xlab("") +
+   geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+ xlim(0,10.5) 
+  
+plot2 <- ggplot(data=as.data.frame(pla.ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + 
+  ylab(expression(italic("P. insularis")*"occurrence"))+ xlab("") +
+  geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+ xlim(0,10.5) 
+
+plot3 <- ggplot(data=as.data.frame(sal.ee), aes(x=aridity, y=fit, color=Microsite)) + theme_Publication() + 
+  ylab(expression(italic("S. columbariae")*"occurrence"))+
+  geom_line(lwd=2) +   geom_ribbon(aes(ymin = lower, ymax=upper, fill=Microsite), alpha=0.3, color=NA) + 
+  scale_color_manual(values=c("#E69F00", "#56B4E9")) + scale_fill_manual(values=c("#E69F00", "#56B4E9"))+ xlim(0,10.5) 
+
+gridExtra::grid.arrange(plot1, plot2, plot3, nrow=3)
+```
+
+
+### Analyze nutrients along aridity gradient in shrub canopies
+```{r, message=FALSE, warning=FALSE, fig.width=8, fig.height=22}
+
+### abiotic characteristics
+nutrient <- read.csv("Data//ERG.soilnutrients.csv")
+
+nutArid <- merge(nutrient, subset(arid, Year==2017), by=c("Site"))
+
+nutMean <- nutArid %>% group_by(aridity, microsite) %>%  summarize(n=mean(N),p=mean(P),k=mean(K), n.se=se(N), p.se=se(P), k.se=se(K))
+
+m1 <- lm(log(N) ~ microsite * aridity, data=nutArid)
 anova(m1)
-r.squaredGLMM(m1) ## R squared values 
+shapiro.test(m1$residuals)
+r.squared(m1)
 
-
-m2.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.npan, species=="P. insularis"  & census=="end"), family=binomial)
-car::Anova(m2.l, type=3)
-
-m2 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year), data=subset(census.long, species=="P. insularis" & presence==1))
-shapiro.test(resid(m2))
+m2 <- lm(log(P) ~ microsite * poly(aridity,2), data=nutArid)
 anova(m2)
-r.squaredGLMM(m2) ## R squared values 
+shapiro.test(m2$residuals)
+r.squared(m2)
 
-# m3.l <- glmer(presence~Microsite * poly(gams,2) * Nutrient + (1|Year),data=subset(census.npan, species=="S. columbariae" & census=="end"), family=binomial)
-# car::Anova(m3.l, type=2)
-
-m3 <- lmer(log(biomass)~Microsite * poly(gams,2) * Nutrient + (1|Year), data=subset(census.long, species=="S. columbariae" & biomass>0))
-shapiro.test(resid(m3))
+m3 <- lm(log(K) ~ microsite * aridity, data=nutArid)
 anova(m3)
-r.squaredGLMM(m3) ## R squared values 
+shapiro.test(m3$residuals)
+r.squared(m3)
 
 
-## summary presence
-mean.occ <- census.npan %>% group_by(gams,species, Microsite) %>% summarize(presence=mean(presence))
+plot1 <- ggplot(data=nutArid, aes(x=aridity, y= log(N))) + theme_Publication() + 
+  ylab("Nitrogen")+
+  geom_jitter(size=2, width = 0.2, alpha=1, aes(color=microsite)) + 
+  geom_smooth(method="lm", lwd=2, lty=1, color="black") +
+  scale_color_manual(values=c(scol, ocol)) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))
 
-## Revise to have end surveys only
-census.bin <- subset(census.npan, census=="end") 
+plot2 <- ggplot(data=nutArid, aes(x=aridity, y= log(P), color=microsite, fill=microsite)) + theme_Publication() +
+  ylab("Phosphorus")+
+  geom_jitter(size=2, width = 0.2, alpha=1) + 
+  geom_smooth(method="lm", lwd=2, formula = y ~ poly(x,2)) +
+  scale_color_manual(values=c(scol, ocol)) +
+  scale_fill_manual(values=c(scol, ocol)) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))
 
-p11 <- ggplot(census.npan, aes(x=gams, y=presence, fill=species, color=species))  + theme_Publication()+  
-  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~x,aes(x=gams, y=presence),fill="#0daec2", color="#0daec2",  data=subset(census.npan, species=="P. tanacetifolia"), lwd=2)+  
- geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence), color="#fb6f70", fill="#fb6f7050",  data=subset(census.npan, species=="P. insularis" & Microsite=="shrub"), lwd=2)+ 
-   geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence), color="#fb6f70", fill="#fb6f7050",  data=subset(census.npan, species=="P. insularis" & Microsite=="open"), lwd=2, lty=2) + 
-  geom_smooth(method="glm", method.args=list(family="binomial"), formula= y~poly(x,2),aes(x=gams, y=presence),fill="#b7d73850", color="#b7d738",  data=subset(census.npan, species=="S. columbariae"), lwd=2)+ ylab("Probability of occurrence") + xlab("")
+plot3 <- ggplot(data=nutArid, aes(x=aridity, y= log(K))) + theme_Publication() + 
+  ylab("Potassium")+
+  geom_jitter(size=2, width = 0.2, alpha=1, aes(color=microsite)) + 
+  geom_smooth(method="lm", lwd=2, lty=1, color="black") +
+  scale_color_manual(values=c(scol, ocol)) +
+  guides(color=guide_legend(override.aes=list(fill=NA)))
 
-
-p12 <- ggplot(census.long, aes(x=gams, y=biomass, fill=species, color=species))  + theme_Publication() +  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)), color="#fb6f70", fill="#fb6f7050",  data=subset(census.long, species=="P. insularis" & biomass>0), lwd=2, fullrange=TRUE) + geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#b7d73850", color="#b7d738",  data=subset(census.long, species=="S. columbariae"& biomass>0), lwd=3)+
-  geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#0daec2", color="#0daec2",  data=subset(census.long, species=="P. tanacetifolia" & biomass>0 & Microsite=="shrub"), lwd=2, fullrange=TRUE)+geom_smooth(method="lm", formula= y~poly(x,2),aes(x=gams, y=log(biomass)),fill="#0daec2", color="#0daec2",  data=subset(census.long, species=="P. tanacetifolia" & biomass>0 & Microsite=="open"), lwd=2,lty=2, fullrange=TRUE)+ ylab("Phytometer biomass") + xlab("Gradient of rainfall continentality") 
-
-
-grid.arrange(p9,p11,p10, p12)
-
-
-grid.arrange(p11,p12)
+require(gridExtra)
+grid.arrange(plot1, plot2, plot3, nrow=3)
 ```
-
-### Characteristics of shrubs
-```{r}
-sumShrub <- sitevars %>%  group_by(Site) %>% summarize(nvol = mean(volume, na.rm=T), ncanopy= mean(canopy, na.rm=T), ndx=mean(Dx, na.rm=T), nDxEph=mean(DxEph, na.rm=T))
-```
-
-data <- read.csv("Data//aridity.PET.csv")
