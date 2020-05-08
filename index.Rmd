@@ -72,6 +72,119 @@ sitevars <- read.csv("Data//ERG.shrub.csv")
 ```
 
 
+### Weather for growing season
+```{r echo=FALSE, fid.width=28, warning=FALSE, message=FALSE}
+
+## weather station data
+
+data <- read.table("Data/ERG.climatedata.csv", header=T,sep=",")
+site.names <- c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")
+season1 <- subset(data, year==2015 & month > 10 | year==2016 & month < 5)
+season2 <- subset(data, year==2016 & month > 10 | year==2017 & month < 5)
+data <- rbind(season1,season2)
+data[,"season"] <- c(rep("season.1",nrow(season1)),rep("season.2",nrow(season2)))
+data <- na.omit(data)
+
+means <- aggregate(data$avg.temp, by=list(data$season,data$Gradient), mean)
+means.se <- aggregate(data$avg.temp, by=list(data$season,data$Gradient), se)
+means[,"se"] <- means.se[,3]
+colnames(means) <- c("season","gradient","avg","se")
+means[,"upper"] <- means[,"avg"]+means[,"se"]*1.96
+means[,"lower"] <- means[,"avg"]-means[,"se"]*1.96
+
+q <- ggplot(means, aes(x=gradient, y=avg, ymin=lower, ymax=upper, fill=season)) +  geom_pointrange( position=position_dodge(width=0.4), color = rep(c("Grey50","Black"),7), size=1)+ guides(fill = "none") + scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0)) + ylab("Average Temperature (C°)") + theme_Publication()
+q
+
+#precipitation
+precip <- aggregate(data$Precip, by=list(data$season,data$Gradient), sum)
+colnames(precip) <- c("season","Gradient","Precip")
+
+p <-ggplot(precip, aes(Gradient, Precip, fill=season)) +geom_bar(stat = "identity", aes(fill = season), position = "dodge")+ scale_fill_manual(values = c("Black","Grey50"))+ scale_x_discrete(limits=c("Panoche","Cuyama","Tejon","Barstow","hwy40","Sheephole","Tecopa")) + scale_y_continuous(expand = c(0, 0))+ylab("Precipitation (mm)") + theme_Publication()+ guides(fill = "none") 
+p
+
+### Calculate seasonal gams
+site.gps <- read.csv("Data/ERGsites.csv")
+names(site.gps)[1] <- "Site"
+
+## seasonal precipitation
+season.precip <- data %>% filter(month %in% c(12,1,2)) %>% group_by(Site,season) %>%  summarize(precip=sum(Precip))
+
+season.precip <- merge(site.gps, season.precip, by=c("Site"))
+season.precip$gams <- (season.precip$precip*4 - (900-season.precip$elevation)/100*(season.precip$precip*0.4))/season.precip$elevation
+season.precip$gams <- atan(season.precip$gams)
+
+```
+
+### Climate patterns within study
+```{r fid.height=20, fid.width=28, }
+season1.sjd <- season1 %>% filter(Gradient<4) %>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+season1.mnp <- season1 %>% filter(Gradient>3)%>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+season2.sjd <- season2 %>% filter(Gradient<4) %>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+season2.mnp <- season2 %>% filter(Gradient>3)%>% group_by(year, month,days) %>% summarise_if(is.numeric, funs(mean(., na.rm=T)))
+
+## Rain vs Temperature in 2016
+par(mfrow=c(2,1))
+par(mar=c(3.5,4.5,1,4.5))
+plot1 <- barplot(height=season1.sjd$Precip, ylim=c(0,14), ylab="Average precipitation San Joaquin (cm)")
+points(plot1[,1], season1.sjd$min.temp, type="l", col="#FF000050", lwd=2)
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature at all sites (°C)", 4, line=3)
+par(mar=c(4.5,4.5,0,4.5))
+plot1 <- barplot(height=season1.mnp$Precip, ylim=c(0,14), ylab="Average precipitation Mojave (cm)")
+axis(1, plot1[c(1,30,60,90,120,150,180)], c("Nov","Dec","Jan","Feb","Mar","Apr","May"))
+points(plot1[,1], season1.mnp$min.temp, type="l", col="#FF000050", lwd=2)
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature at all sites (°C)", 4, line=3)
+
+
+## Rain vs Temperature in 2017
+par(mfrow=c(2,1))
+par(mar=c(3.5,4.5,1,4.5))
+plot2 <- barplot(height=season2.sjd$Precip, ylim=c(0,14), ylab="Average precipitation San Joaquin (cm)")
+points(plot2[,1], season2.sjd$min.temp, type="l", col="#FF000050", lwd=2)
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature San Joaquin (°C)", 4, line=3)
+par(mar=c(4.5,4.5,0,4.5))
+plot2 <- barplot(height=season2.mnp$Precip, ylim=c(0,14), ylab="Average precipitation Mojave (cm)")
+points(plot2[,1], season2.mnp$min.temp, type="l", col="#FF000050", lwd=2)
+axis(1, plot1[c(1,30,60,90,120,150,180)], c("Nov","Dec","Jan","Feb","Mar","Apr","May"))
+axis(4, at=seq(0,14,2), lab=seq(0,14,2), ylab="")
+mtext("Average temperature Mojave (°C)", 4, line=3)
+
+### 2016 The rain was inconsistent and mostly absent in the Mojave. This resulted in low germination and producitivty at the southern sites
+### 2017 The rain was more plentiful, but in the northern sites, there appears to be a frost period after the majority of the rainfall. Need to check number of frost days
+
+season1.frost <- season1 %>% group_by(Site) %>% summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100)
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site) %>% summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100)
+data.frame(season2.frost)
+## Both years had comparable number of frost days
+
+## Compare number of consecutive frost days (i.e. frost periods)
+season1[,"frost"] <- ifelse(season1$min.temp<0, -99,season1$min.temp) ## identified days below freezing
+season2[,"frost"] <- ifelse(season2$min.temp<0, -99,season2$min.temp) ## identified days below freezing
+count.consec <- function(x) {max(rle(as.character(x))$lengths)}
+
+season1.frost <- season1 %>% group_by(Site)  %>% summarize(count.consec(frost))
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site) %>% summarize(count.consec(frost))
+data.frame(season2.frost)
+
+## compare only after plants have germinated
+season1.frost <- season1 %>% group_by(Site) %>% filter(year>2015) %>% summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100, avg.min.temp=mean(min.temp, na.rm=T))
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site) %>%  filter(year>2016) %>%  summarize(frost.days=sum(min.temp<0, na.rm=T)/length(min.temp)*100,avg.min.temp=mean(min.temp, na.rm=T))
+data.frame(season2.frost)
+
+season1.frost <- season1 %>% group_by(Site)  %>% filter(year>2015) %>% summarize(count.consec(frost))
+data.frame(season1.frost)
+season2.frost <- season2 %>% group_by(Site)  %>%  filter(year>2016)%>% summarize(count.consec(frost))
+data.frame(season2.frost)
+
+```
+
+
+
 ### Ambient plant community response to aridity gradient and shrub facilitation
 ```{r , message=FALSE, warning=FALSE,  fig.width=8,  fig.height=8}
 
